@@ -167,42 +167,62 @@ Your slides should cover:
 
 ## Commands
 
-Create a virtual environment and install dependencies:
+This project uses `uv` and the dependency definitions in [pyproject.toml](/Users/glouno/sourceCode/RITAL-IR-project/pyproject.toml).
+
+Initial setup:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
+uv sync
+```
+
+This will create the local environment and install the project from `pyproject.toml`.
+
+If you add a new dependency, do not edit ad-hoc environment state with `pip`. Use:
+
+```bash
+uv add <package>
+```
+
+If you need a development-only dependency, use:
+
+```bash
+uv add --dev <package>
+```
+
+After pulling new changes from teammates, refresh the environment with:
+
+```bash
+uv sync
 ```
 
 List the paper datasets:
 
 ```bash
-python -m src.main datasets list
+uv run python -m src.main datasets list
 ```
 
 Download the four main UltraDomain subsets:
 
 ```bash
-python -m src.main datasets download mix cs legal agriculture
+uv run python -m src.main datasets download mix cs legal agriculture
 ```
 
 Inspect a downloaded dataset:
 
 ```bash
-python -m src.main datasets stats data/ultradomain/mix.jsonl
+uv run python -m src.main datasets stats data/ultradomain/mix.jsonl
 ```
 
 Print the implementation breakdown:
 
 ```bash
-python -m src.main plan
+uv run python -m src.main plan
 ```
 
 Run the local HiRAG-style demo on a small subset:
 
 ```bash
-python -m src.main demo \
+uv run python -m src.main demo \
   --dataset data/ultradomain/mix.jsonl \
   --limit 5
 ```
@@ -210,10 +230,16 @@ python -m src.main demo \
 With a custom query:
 
 ```bash
-python -m src.main demo \
+uv run python -m src.main demo \
   --dataset data/ultradomain/cs.jsonl \
   --limit 5 \
   --query "How does Spark Streaming enable real-time processing?"
+```
+
+Run the tests:
+
+```bash
+uv run python -m unittest discover -s tests
 ```
 
 ## Practical advice

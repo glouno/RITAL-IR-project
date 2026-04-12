@@ -8,6 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+uv.lock
 
 # Local data and scratch artifacts
 data/ultradomain/*.jsonl

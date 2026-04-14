@@ -11,7 +11,7 @@ from urllib.request import urlopen
 from .constants import ALL_DATASETS, MAIN_PAPER_DATASETS
 
 
-DEFAULT_DATA_DIR = Path("data/ultradomain")
+DEFAULT_DATA_DIR = Path("data/datasets")
 
 
 def iter_jsonl(path: str | Path) -> Iterable[dict[str, Any]]:

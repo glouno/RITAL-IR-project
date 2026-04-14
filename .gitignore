@@ -11,5 +11,10 @@ wheels/
 uv.lock
 
 # Local data and scratch artifacts
-data/ultradomain/*.jsonl
+data/
 tmp/
+legacy/
+CACHEDIR.TAG
+
+# Env file
+.env

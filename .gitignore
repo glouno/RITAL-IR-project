@@ -15,6 +15,7 @@ data/
 tmp/
 legacy/
 CACHEDIR.TAG
+.runs/
 
 # Env file
 .env

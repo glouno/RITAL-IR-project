@@ -9,6 +9,16 @@ This repo mixes two different implementation tracks:
 
 If the goal is to run the current fork against a local OpenAI-compatible backend, start from top-level `main.py`, not `src/rital_ir_project/cli.py`.
 
+## Change Tracking
+
+Use [`FORK_CHANGES.md`](/home/paulbeglin/projects/RITAL-IR-project/FORK_CHANGES.md) as the running changelog for this fork.
+
+When making future changes:
+
+- update `FORK_CHANGES.md` in the same change set
+- summarize behavior or experiment impact, not just file edits
+- keep `AGENTS.md` focused on orientation and workflow, and keep detailed fork history in `FORK_CHANGES.md`
+
 ## Active Execution Path
 
 The current indexing/query path is:

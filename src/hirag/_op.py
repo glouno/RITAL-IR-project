@@ -45,6 +45,21 @@ def timer():
         logging.info(f"\033[94m[Retrieval Time: {elapsed_time:.6f} seconds]\033[0m")
 
 
+def _get_prompts(global_config: dict | None = None) -> dict:
+    if global_config is None:
+        return PROMPTS
+    return global_config.get("prompts", PROMPTS)
+
+
+def _get_stage_max_tokens(
+    global_config: dict, stage: str, fallback: int | None = None
+) -> int | None:
+    stage_max_tokens = global_config.get("stage_max_tokens", {})
+    if stage in stage_max_tokens:
+        return stage_max_tokens[stage]
+    return fallback
+
+
 def chunking_by_token_size(
     tokens_list: list[list[int]],
     doc_keys,
@@ -155,7 +170,8 @@ async def _handle_entity_relation_summary(
     tokens = encode_string_by_tiktoken(description, model_name=tiktoken_model_name)
     if len(tokens) < summary_max_tokens:  # No need for summary
         return description
-    prompt_template = PROMPTS["summarize_entity_descriptions"]
+    prompts = _get_prompts(global_config)
+    prompt_template = prompts["summarize_entity_descriptions"]
     use_description = decode_tokens_by_tiktoken(
         tokens[:llm_max_tokens], model_name=tiktoken_model_name
     )
@@ -165,7 +181,13 @@ async def _handle_entity_relation_summary(
     )
     use_prompt = prompt_template.format(**context_base)
     logger.debug(f"Trigger summary: {entity_or_relation_name}")
-    summary = await use_llm_func(use_prompt, max_tokens=summary_max_tokens)
+    summary = await use_llm_func(
+        use_prompt,
+        stage="entity_merge_summary",
+        max_tokens=_get_stage_max_tokens(
+            global_config, "entity_merge_summary", summary_max_tokens
+        ),
+    )
     return summary
 
 
@@ -331,17 +353,18 @@ async def extract_hierarchical_entities(
     entity_extract_max_gleaning = global_config["entity_extract_max_gleaning"]
 
     ordered_chunks = list(chunks.items())
-    entity_extract_prompt = PROMPTS["hi_entity_extraction"]        # give 3 examples in the prompt context
-    relation_extract_prompt = PROMPTS["hi_relation_extraction"]
+    prompts = _get_prompts(global_config)
+    entity_extract_prompt = prompts["hi_entity_extraction"]
+    relation_extract_prompt = prompts["hi_relation_extraction"]
 
     context_base_entity = dict(
-        tuple_delimiter=PROMPTS["DEFAULT_TUPLE_DELIMITER"],
-        record_delimiter=PROMPTS["DEFAULT_RECORD_DELIMITER"],
-        completion_delimiter=PROMPTS["DEFAULT_COMPLETION_DELIMITER"],
-        entity_types=",".join(PROMPTS["META_ENTITY_TYPES"])
+        tuple_delimiter=prompts["DEFAULT_TUPLE_DELIMITER"],
+        record_delimiter=prompts["DEFAULT_RECORD_DELIMITER"],
+        completion_delimiter=prompts["DEFAULT_COMPLETION_DELIMITER"],
+        entity_types=",".join(prompts["META_ENTITY_TYPES"])
     )
-    continue_prompt = PROMPTS["entiti_continue_extraction"]     # means low quality in the last extraction
-    if_loop_prompt = PROMPTS["entiti_if_loop_extraction"]       # judge if there are still entities still need to be extracted
+    continue_prompt = prompts["entiti_continue_extraction"]
+    if_loop_prompt = prompts["entiti_if_loop_extraction"]
 
     already_processed = 0
     already_entities = 0
@@ -353,24 +376,41 @@ async def extract_hierarchical_entities(
         chunk_dp = chunk_key_dp[1]
         content = chunk_dp["content"]
         hint_prompt = entity_extract_prompt.format(**context_base_entity, input_text=content)      # fill in the parameter
-        final_result = await use_llm_func(hint_prompt)                                      # feed into LLM with the prompt
+        final_result = await use_llm_func(
+            hint_prompt,
+            stage="entity_extract",
+            max_tokens=_get_stage_max_tokens(global_config, "entity_extract"),
+        )
 
         # check if need gleaning
         history = pack_user_ass_to_openai_messages(hint_prompt, final_result)               # set as history
         if_loop_result: str = await use_llm_func(
-            if_loop_prompt, history_messages=history
+            if_loop_prompt,
+            history_messages=history,
+            stage="entity_glean_check",
+            max_tokens=_get_stage_max_tokens(global_config, "entity_glean_check"),
         )
         if_loop_result = if_loop_result.strip().strip('"').strip("'").lower()
         if if_loop_result == "yes":
             logger.info(f"\033[91m[Found Missed Entities, Gleaning {entity_extract_max_gleaning} times]\033[0m")
             for now_glean_index in range(entity_extract_max_gleaning):
-                glean_result = await use_llm_func(continue_prompt, history_messages=history)
+                glean_result = await use_llm_func(
+                    continue_prompt,
+                    history_messages=history,
+                    stage="entity_glean_continue",
+                    max_tokens=_get_stage_max_tokens(global_config, "entity_glean_continue"),
+                )
+                if not glean_result:
+                    glean_result = ""
                 history += pack_user_ass_to_openai_messages(continue_prompt, glean_result)      # add to history
                 final_result += glean_result
                 if now_glean_index == entity_extract_max_gleaning - 1:
                     break
                 if_loop_result: str = await use_llm_func(                                       # judge if we still need the next iteration
-                    if_loop_prompt, history_messages=history
+                    if_loop_prompt,
+                    history_messages=history,
+                    stage="entity_glean_check",
+                    max_tokens=_get_stage_max_tokens(global_config, "entity_glean_check"),
                 )
                 if_loop_result = if_loop_result.strip().strip('"').strip("'").lower()
                 if if_loop_result != "yes":
@@ -410,8 +450,8 @@ async def extract_hierarchical_entities(
         already_processed += 1                                      # already processed chunks
         already_entities += len(maybe_nodes)
         already_relations += len(maybe_edges)
-        now_ticks = PROMPTS["process_tickers"][                     # for visualization
-            already_processed % len(PROMPTS["process_tickers"])
+        now_ticks = prompts["process_tickers"][
+            already_processed % len(prompts["process_tickers"])
         ]
         print(
             f"{now_ticks} Processed {already_processed}({already_processed*100//len(ordered_chunks)}%) chunks,  {already_entities} entities(duplicated), {already_relations} relations(duplicated)\r",
@@ -461,24 +501,36 @@ async def extract_hierarchical_entities(
 
         entities = context_entities[chunk_key]
         context_base_relation = dict(
-            tuple_delimiter=PROMPTS["DEFAULT_TUPLE_DELIMITER"],
-            record_delimiter=PROMPTS["DEFAULT_RECORD_DELIMITER"],
-            completion_delimiter=PROMPTS["DEFAULT_COMPLETION_DELIMITER"],
+            tuple_delimiter=prompts["DEFAULT_TUPLE_DELIMITER"],
+            record_delimiter=prompts["DEFAULT_RECORD_DELIMITER"],
+            completion_delimiter=prompts["DEFAULT_COMPLETION_DELIMITER"],
             entities=",".join(entities)
             )
-        hint_prompt = relation_extract_prompt.format(**context_base_relation, input_text=content)      # fill in the parameter
-        final_result = await use_llm_func(hint_prompt)                                      # feed into LLM with the prompt
+        hint_prompt = relation_extract_prompt.format(**context_base_relation, input_text=content)
+        final_result = await use_llm_func(
+            hint_prompt,
+            stage="relation_extract",
+            max_tokens=_get_stage_max_tokens(global_config, "relation_extract"),
+        )
 
         # check if need gleaning
         history = pack_user_ass_to_openai_messages(hint_prompt, final_result)               # set as history
         if_loop_result: str = await use_llm_func(                                       # judge if we still need the next iteration
-            if_loop_prompt, history_messages=history
+            if_loop_prompt,
+            history_messages=history,
+            stage="relation_glean_check",
+            max_tokens=_get_stage_max_tokens(global_config, "relation_glean_check"),
         )
         if_loop_result = if_loop_result.strip().strip('"').strip("'").lower()
         if if_loop_result == "yes":
             logger.info(f"\033[91m[Found Missed Relations, Gleaning {entity_extract_max_gleaning} times]\033[0m")
             for now_glean_index in range(entity_extract_max_gleaning):
-                glean_result = await use_llm_func(continue_prompt, history_messages=history)
+                glean_result = await use_llm_func(
+                    continue_prompt,
+                    history_messages=history,
+                    stage="relation_glean_continue",
+                    max_tokens=_get_stage_max_tokens(global_config, "relation_glean_continue"),
+                )
 
                 history += pack_user_ass_to_openai_messages(continue_prompt, glean_result)      # add to history
                 final_result += glean_result
@@ -486,7 +538,10 @@ async def extract_hierarchical_entities(
                     break
 
                 if_loop_result: str = await use_llm_func(                                       # judge if we still need the next iteration
-                    if_loop_prompt, history_messages=history
+                    if_loop_prompt,
+                    history_messages=history,
+                    stage="relation_glean_check",
+                    max_tokens=_get_stage_max_tokens(global_config, "relation_glean_check"),
                 )
                 if_loop_result = if_loop_result.strip().strip('"').strip("'").lower()
                 if if_loop_result != "yes":
@@ -526,8 +581,8 @@ async def extract_hierarchical_entities(
         already_processed += 1                                      # already processed chunks
         already_entities += len(maybe_nodes)
         already_relations += len(maybe_edges)
-        now_ticks = PROMPTS["process_tickers"][                     # for visualization
-            already_processed % len(PROMPTS["process_tickers"])
+        now_ticks = prompts["process_tickers"][
+            already_processed % len(prompts["process_tickers"])
         ]
         print(
             f"{now_ticks} Processed {already_processed}({already_processed*100//len(ordered_chunks)}%) chunks,  {already_entities} entities(duplicated), {already_relations} relations(duplicated)\r",
@@ -612,15 +667,16 @@ async def extract_entities(
 
     ordered_chunks = list(chunks.items())                       # chunks
 
-    entity_extract_prompt = PROMPTS["entity_extraction"]        # give 3 examples in the prompt context
+    prompts = _get_prompts(global_config)
+    entity_extract_prompt = prompts["entity_extraction"]
     context_base = dict(
-        tuple_delimiter=PROMPTS["DEFAULT_TUPLE_DELIMITER"],
-        record_delimiter=PROMPTS["DEFAULT_RECORD_DELIMITER"],
-        completion_delimiter=PROMPTS["DEFAULT_COMPLETION_DELIMITER"],
-        entity_types=",".join(PROMPTS["DEFAULT_ENTITY_TYPES"]),
+        tuple_delimiter=prompts["DEFAULT_TUPLE_DELIMITER"],
+        record_delimiter=prompts["DEFAULT_RECORD_DELIMITER"],
+        completion_delimiter=prompts["DEFAULT_COMPLETION_DELIMITER"],
+        entity_types=",".join(prompts["DEFAULT_ENTITY_TYPES"]),
     )
-    continue_prompt = PROMPTS["entiti_continue_extraction"]     # means low quality in the last extraction
-    if_loop_prompt = PROMPTS["entiti_if_loop_extraction"]       # judge if there are still entities still need to be extracted
+    continue_prompt = prompts["entiti_continue_extraction"]
+    if_loop_prompt = prompts["entiti_if_loop_extraction"]
 
     already_processed = 0
     already_entities = 0
@@ -632,24 +688,39 @@ async def extract_entities(
         chunk_dp = chunk_key_dp[1]
         content = chunk_dp["content"]
         hint_prompt = entity_extract_prompt.format(**context_base, input_text=content)      # fill in the parameter
-        final_result = await use_llm_func(hint_prompt)                                      # feed into LLM with the prompt
+        final_result = await use_llm_func(
+            hint_prompt,
+            stage="entity_extract",
+            max_tokens=_get_stage_max_tokens(global_config, "entity_extract"),
+        )
 
         # check if need gleaning
         history = pack_user_ass_to_openai_messages(hint_prompt, final_result)               # set as history
         if_loop_result: str = await use_llm_func(
-            if_loop_prompt, history_messages=history
+            if_loop_prompt,
+            history_messages=history,
+            stage="entity_glean_check",
+            max_tokens=_get_stage_max_tokens(global_config, "entity_glean_check"),
         )
         if_loop_result = if_loop_result.strip().strip('"').strip("'").lower()
         if if_loop_result == "yes":
             logger.info(f"\033[91m[Found Missed Entities, Gleaning {entity_extract_max_gleaning} times]\033[0m")
             for now_glean_index in range(entity_extract_max_gleaning):
-                glean_result = await use_llm_func(continue_prompt, history_messages=history)
+                glean_result = await use_llm_func(
+                    continue_prompt,
+                    history_messages=history,
+                    stage="entity_glean_continue",
+                    max_tokens=_get_stage_max_tokens(global_config, "entity_glean_continue"),
+                )
                 history += pack_user_ass_to_openai_messages(continue_prompt, glean_result)      # add to history
                 final_result += glean_result
                 if now_glean_index == entity_extract_max_gleaning - 1:
                     break
                 if_loop_result: str = await use_llm_func(                                       # judge if we still need the next iteration
-                    if_loop_prompt, history_messages=history
+                    if_loop_prompt,
+                    history_messages=history,
+                    stage="entity_glean_check",
+                    max_tokens=_get_stage_max_tokens(global_config, "entity_glean_check"),
                 )
                 if_loop_result = if_loop_result.strip().strip('"').strip("'").lower()
                 if if_loop_result != "yes":
@@ -689,8 +760,8 @@ async def extract_entities(
         already_processed += 1                                      # already processed chunks
         already_entities += len(maybe_nodes)
         already_relations += len(maybe_edges)
-        now_ticks = PROMPTS["process_tickers"][                     # for visualization
-            already_processed % len(PROMPTS["process_tickers"])
+        now_ticks = prompts["process_tickers"][
+            already_processed % len(prompts["process_tickers"])
         ]
         print(
             f"{now_ticks} Processed {already_processed}({already_processed*100//len(ordered_chunks)}%) chunks,  {already_entities} entities(duplicated), {already_relations} relations(duplicated)\r",
@@ -922,7 +993,8 @@ async def generate_community_report(
         "convert_response_to_json_func"
     ]
 
-    community_report_prompt = PROMPTS["community_report"]
+    prompts = _get_prompts(global_config)
+    community_report_prompt = prompts["community_report"]
 
     communities_schema = await knwoledge_graph_inst.community_schema()
     community_keys, community_values = list(communities_schema.keys()), list(
@@ -942,11 +1014,16 @@ async def generate_community_report(
             global_config=global_config,
         )
         prompt = community_report_prompt.format(input_text=describe)
-        response = await use_llm_func(prompt, **llm_extra_kwargs)
+        response = await use_llm_func(
+            prompt,
+            stage="community_report",
+            max_tokens=_get_stage_max_tokens(global_config, "community_report"),
+            **llm_extra_kwargs,
+        )
         data = use_string_json_convert_func(response)
         already_processed += 1
-        now_ticks = PROMPTS["process_tickers"][
-            already_processed % len(PROMPTS["process_tickers"])
+        now_ticks = prompts["process_tickers"][
+            already_processed % len(prompts["process_tickers"])
         ]
         print(
             f"{now_ticks} Processed {already_processed} communities\r",
@@ -1814,6 +1891,7 @@ async def hierarchical_query(
     query_param: QueryParam,
     global_config: dict,
 ) -> str:
+    prompts = _get_prompts(global_config)
     use_model_func = global_config["best_model_func"]
     with timer():
         context = await _build_hierarchical_query_context(
@@ -1827,14 +1905,16 @@ async def hierarchical_query(
     if query_param.only_need_context:
         return context
     if context is None:
-        return PROMPTS["fail_response"]
-    sys_prompt_temp = PROMPTS["local_rag_response"]
+        return prompts["fail_response"]
+    sys_prompt_temp = prompts["local_rag_response"]
     sys_prompt = sys_prompt_temp.format(
         context_data=context, response_type=query_param.response_type
     )
     response = await use_model_func(
         query,
         system_prompt=sys_prompt,
+        stage="query_answer",
+        max_tokens=_get_stage_max_tokens(global_config, "query_answer"),
     )
     return response
 
@@ -1847,6 +1927,7 @@ async def hierarchical_bridge_query(
     query_param: QueryParam,
     global_config: dict,
 ) -> str:
+    prompts = _get_prompts(global_config)
     use_model_func = global_config["best_model_func"]
     with timer():
         context = await _build_hibridge_query_context(
@@ -1860,14 +1941,16 @@ async def hierarchical_bridge_query(
     if query_param.only_need_context:
         return context
     if context is None:
-        return PROMPTS["fail_response"]
-    sys_prompt_temp = PROMPTS["local_rag_response"]
+        return prompts["fail_response"]
+    sys_prompt_temp = prompts["local_rag_response"]
     sys_prompt = sys_prompt_temp.format(
         context_data=context, response_type=query_param.response_type
     )
     response = await use_model_func(
         query,
         system_prompt=sys_prompt,
+        stage="query_answer",
+        max_tokens=_get_stage_max_tokens(global_config, "query_answer"),
     )
     return response
 
@@ -1880,6 +1963,7 @@ async def hierarchical_local_query(
     query_param: QueryParam,
     global_config: dict,
 ) -> str:
+    prompts = _get_prompts(global_config)
     use_model_func = global_config["best_model_func"]
     with timer():
         context = await _build_hilocal_query_context(
@@ -1893,14 +1977,16 @@ async def hierarchical_local_query(
     if query_param.only_need_context:
         return context
     if context is None:
-        return PROMPTS["fail_response"]
-    sys_prompt_temp = PROMPTS["local_rag_response"]
+        return prompts["fail_response"]
+    sys_prompt_temp = prompts["local_rag_response"]
     sys_prompt = sys_prompt_temp.format(
         context_data=context, response_type=query_param.response_type
     )
     response = await use_model_func(
         query,
         system_prompt=sys_prompt,
+        stage="query_answer",
+        max_tokens=_get_stage_max_tokens(global_config, "query_answer"),
     )
     return response
 
@@ -1913,6 +1999,7 @@ async def hierarchical_global_query(
     query_param: QueryParam,
     global_config: dict,
 ) -> str:
+    prompts = _get_prompts(global_config)
     use_model_func = global_config["best_model_func"]
     with timer():
         context = await _build_higlobal_query_context(
@@ -1926,14 +2013,16 @@ async def hierarchical_global_query(
     if query_param.only_need_context:
         return context
     if context is None:
-        return PROMPTS["fail_response"]
-    sys_prompt_temp = PROMPTS["local_rag_response"]
+        return prompts["fail_response"]
+    sys_prompt_temp = prompts["local_rag_response"]
     sys_prompt = sys_prompt_temp.format(
         context_data=context, response_type=query_param.response_type
     )
     response = await use_model_func(
         query,
         system_prompt=sys_prompt,
+        stage="query_answer",
+        max_tokens=_get_stage_max_tokens(global_config, "query_answer"),
     )
     return response
 
@@ -1946,6 +2035,7 @@ async def hierarchical_nobridge_query(
     query_param: QueryParam,
     global_config: dict,
 ) -> str:
+    prompts = _get_prompts(global_config)
     """
     retrieve with only related entities
     """
@@ -1962,14 +2052,16 @@ async def hierarchical_nobridge_query(
     if query_param.only_need_context:
         return context
     if context is None:
-        return PROMPTS["fail_response"]
-    sys_prompt_temp = PROMPTS["local_rag_response"]
+        return prompts["fail_response"]
+    sys_prompt_temp = prompts["local_rag_response"]
     sys_prompt = sys_prompt_temp.format(
         context_data=context, response_type=query_param.response_type
     )
     response = await use_model_func(
         query,
         system_prompt=sys_prompt,
+        stage="query_answer",
+        max_tokens=_get_stage_max_tokens(global_config, "query_answer"),
     )
     return response
 
@@ -1980,11 +2072,12 @@ async def naive_query(
     query_param: QueryParam,
     global_config: dict,
 ):
+    prompts = _get_prompts(global_config)
     use_model_func = global_config["best_model_func"]
     with timer():
         results = await chunks_vdb.query(query, top_k=query_param.top_k)
         if not len(results):
-            return PROMPTS["fail_response"]
+            return prompts["fail_response"]
         chunks_ids = [r["id"] for r in results]
         chunks = await text_chunks_db.get_by_ids(chunks_ids)
 
@@ -1997,12 +2090,14 @@ async def naive_query(
         section = "--New Chunk--\n".join([c["content"] for c in maybe_trun_chunks])
         if query_param.only_need_context:
             return section
-    sys_prompt_temp = PROMPTS["naive_rag_response"]
+    sys_prompt_temp = prompts["naive_rag_response"]
     sys_prompt = sys_prompt_temp.format(
         content_data=section, response_type=query_param.response_type
     )
     response = await use_model_func(
         query,
         system_prompt=sys_prompt,
+        stage="query_answer",
+        max_tokens=_get_stage_max_tokens(global_config, "query_answer"),
     )
     return response

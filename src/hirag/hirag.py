@@ -51,6 +51,12 @@ from .base import (
     StorageNameSpace,
     QueryParam,
 )
+from .regimes import (
+    resolve_entity_extract_max_gleaning,
+    resolve_prompt_regime,
+    resolve_prompts,
+    resolve_stage_max_tokens,
+)
 
 
 @dataclass
@@ -79,7 +85,7 @@ class HiRAG:
     tiktoken_model_name: str = "gpt-4o"
 
     # entity extraction
-    entity_extract_max_gleaning: int = 1
+    entity_extract_max_gleaning: int | None = None
     entity_summary_to_max_tokens: int = 500
 
     # graph clustering
@@ -137,9 +143,26 @@ class HiRAG:
     always_create_working_dir: bool = True
     addon_params: dict = field(default_factory=dict)
     convert_response_to_json_func: callable = convert_response_to_json
+    prompt_regime: str = "baseline"
+    prompts: dict = field(default_factory=dict, repr=False)
+    stage_max_tokens: dict = field(default_factory=dict, repr=False)
 
     def __post_init__(self):
-        _print_config = ",\n  ".join([f"{k} = {v}" for k, v in asdict(self).items()])
+        self.prompt_regime = resolve_prompt_regime(self.prompt_regime)
+        self.prompts = self.prompts or resolve_prompts(self.prompt_regime)
+        self.stage_max_tokens = resolve_stage_max_tokens(
+            self.prompt_regime,
+            best_model_max_token_size=self.best_model_max_token_size,
+            entity_summary_to_max_tokens=self.entity_summary_to_max_tokens,
+            overrides=self.stage_max_tokens,
+        )
+        self.entity_extract_max_gleaning = resolve_entity_extract_max_gleaning(
+            self.prompt_regime, self.entity_extract_max_gleaning
+        )
+
+        _print_config = ",\n  ".join(
+            [f"{k} = {v}" for k, v in self._runtime_global_config().items()]
+        )
         logger.debug(f"HiRAG init with param:\n\n  {_print_config}\n")
 
         if self.using_azure_openai:
@@ -158,27 +181,28 @@ class HiRAG:
             logger.info(f"Creating working directory {self.working_dir}")
             os.makedirs(self.working_dir)
 
+        storage_config = self._storage_global_config()
         self.full_docs = self.key_string_value_json_storage_cls(
-            namespace="full_docs", global_config=asdict(self)
+            namespace="full_docs", global_config=storage_config
         )
 
         self.text_chunks = self.key_string_value_json_storage_cls(
-            namespace="text_chunks", global_config=asdict(self)
+            namespace="text_chunks", global_config=storage_config
         )
 
         self.llm_response_cache = (
             self.key_string_value_json_storage_cls(
-                namespace="llm_response_cache", global_config=asdict(self)
+                namespace="llm_response_cache", global_config=storage_config
             )
             if self.enable_llm_cache
             else None
         )
 
         self.community_reports = self.key_string_value_json_storage_cls(
-            namespace="community_reports", global_config=asdict(self)
+            namespace="community_reports", global_config=storage_config
         )
         self.chunk_entity_relation_graph = self.graph_storage_cls(
-            namespace="chunk_entity_relation", global_config=asdict(self)
+            namespace="chunk_entity_relation", global_config=storage_config
         )
 
         self.embedding_func = limit_async_func_call(self.embedding_func_max_async)(
@@ -187,7 +211,7 @@ class HiRAG:
         self.entities_vdb = (
             self.vector_db_storage_cls(
                 namespace="entities",
-                global_config=asdict(self),
+                global_config=storage_config,
                 embedding_func=self.embedding_func,
                 meta_fields={"entity_name"},
             )
@@ -197,7 +221,7 @@ class HiRAG:
         self.chunks_vdb = (
             self.vector_db_storage_cls(
                 namespace="chunks",
-                global_config=asdict(self),
+                global_config=storage_config,
                 embedding_func=self.embedding_func,
             )
             if self.enable_naive_rag
@@ -210,6 +234,17 @@ class HiRAG:
         self.cheap_model_func = limit_async_func_call(self.cheap_model_max_async)(
             partial(self.cheap_model_func, hashing_kv=self.llm_response_cache)
         )
+
+    def _storage_global_config(self) -> dict:
+        return asdict(self)
+
+    def _runtime_global_config(self) -> dict:
+        config = asdict(self)
+        config["prompts"] = self.prompts
+        config["stage_max_tokens"] = self.stage_max_tokens
+        config["prompt_regime"] = self.prompt_regime
+        config["entity_extract_max_gleaning"] = self.entity_extract_max_gleaning
+        return config
 
     def insert(self, string_or_strings):
         loop = always_get_an_event_loop()
@@ -241,7 +276,7 @@ class HiRAG:
                 self.community_reports,
                 self.text_chunks,
                 param,
-                asdict(self),
+                self._runtime_global_config(),
             )
         elif param.mode == "hi_bridge":                 # retrieve with only bridge knowledge
             response = await hierarchical_bridge_query(
@@ -251,7 +286,7 @@ class HiRAG:
                 self.community_reports,
                 self.text_chunks,
                 param,
-                asdict(self),
+                self._runtime_global_config(),
             )
         elif param.mode == "hi_local":                  # retrieve with only local knowledge
             response = await hierarchical_local_query(
@@ -261,7 +296,7 @@ class HiRAG:
                 self.community_reports,
                 self.text_chunks,
                 param,
-                asdict(self),
+                self._runtime_global_config(),
             )
         elif param.mode == "hi_global":                 # retrieve with only global knowledge
             response = await hierarchical_global_query(
@@ -271,7 +306,7 @@ class HiRAG:
                 self.community_reports,
                 self.text_chunks,
                 param,
-                asdict(self),
+                self._runtime_global_config(),
             )
         elif param.mode == "hi_nobridge":               # retrieve with no bridge knowledge
             response = await hierarchical_nobridge_query(
@@ -281,7 +316,7 @@ class HiRAG:
                 self.community_reports,
                 self.text_chunks,
                 param,
-                asdict(self),
+                self._runtime_global_config(),
             )
         elif param.mode == "naive":                     # retrieve with only text units
             response = await naive_query(
@@ -289,7 +324,7 @@ class HiRAG:
                 self.chunks_vdb,
                 self.text_chunks,
                 param,
-                asdict(self),
+                self._runtime_global_config(),
             )
         else:
             raise ValueError(f"Unknown mode {param.mode}")
@@ -346,7 +381,7 @@ class HiRAG:
                     inserting_chunks,
                     knwoledge_graph_inst=self.chunk_entity_relation_graph,
                     entity_vdb=self.entities_vdb,
-                    global_config=asdict(self),
+                    global_config=self._runtime_global_config(),
                 )
             else:
                 logger.info("\033[94m[Hierachical Entity Extraction]...\033[0m")
@@ -354,7 +389,7 @@ class HiRAG:
                     inserting_chunks,
                     knowledge_graph_inst=self.chunk_entity_relation_graph,
                     entity_vdb=self.entities_vdb,
-                    global_config=asdict(self),
+                    global_config=self._runtime_global_config(),
                 )
             if maybe_new_kg is None:
                 logger.warning("No new entities found")
@@ -366,7 +401,9 @@ class HiRAG:
                 self.graph_cluster_algorithm                    # use leiden
             )
             await generate_community_report(
-                self.community_reports, self.chunk_entity_relation_graph, asdict(self)
+                self.community_reports,
+                self.chunk_entity_relation_graph,
+                self._runtime_global_config(),
             )
 
             # ---------- commit upsertings and indexing

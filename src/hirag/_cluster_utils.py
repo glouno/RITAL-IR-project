@@ -17,7 +17,7 @@ from .base import (
     BaseVectorStorage
 )
 from ._utils import split_string_by_multi_markers, clean_str, is_float_regex
-from .prompt import GRAPH_FIELD_SEP, PROMPTS
+from .prompt import PROMPTS
 
 # Initialize logging
 logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
@@ -25,6 +25,21 @@ logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 # Set a random seed for reproducibility
 RANDOM_SEED = 224
 random.seed(RANDOM_SEED)
+
+
+def _get_prompts(global_config: dict | None = None) -> dict:
+    if global_config is None:
+        return PROMPTS
+    return global_config.get("prompts", PROMPTS)
+
+
+def _get_stage_max_tokens(
+    global_config: dict, stage: str, fallback: int | None = None
+) -> int | None:
+    stage_max_tokens = global_config.get("stage_max_tokens", {})
+    if stage in stage_max_tokens:
+        return stage_max_tokens[stage]
+    return fallback
 
 
 def global_cluster_embeddings(
@@ -198,6 +213,7 @@ class Hierarchical_Clustering(ClusteringAlgorithm):
         thredshold_change_rate: float = 0.05
     ) -> List[dict]:
         use_llm_func: callable = global_config["best_model_func"]
+        prompts = _get_prompts(global_config)
         # Get the embeddings from the nodes
         nodes = list(entities.values())
         embeddings = np.array([x["embedding"] for x in nodes])
@@ -268,15 +284,19 @@ class Hierarchical_Clustering(ClusteringAlgorithm):
                 # summarize and generate new entities
                 entity_description_list = [f"({x['entity_name']}, {x['description']})" for x in cluster_nodes]
                 context_base_summarize = dict(
-                    tuple_delimiter=PROMPTS["DEFAULT_TUPLE_DELIMITER"],
-                    record_delimiter=PROMPTS["DEFAULT_RECORD_DELIMITER"],
-                    completion_delimiter=PROMPTS["DEFAULT_COMPLETION_DELIMITER"],
-                    meta_attribute_list=PROMPTS["META_ENTITY_TYPES"],
+                    tuple_delimiter=prompts["DEFAULT_TUPLE_DELIMITER"],
+                    record_delimiter=prompts["DEFAULT_RECORD_DELIMITER"],
+                    completion_delimiter=prompts["DEFAULT_COMPLETION_DELIMITER"],
+                    meta_attribute_list=prompts["META_ENTITY_TYPES"],
                     entity_description_list=",".join(entity_description_list)
                     )
-                summarize_prompt = PROMPTS["summary_clusters"]
+                summarize_prompt = prompts["summary_clusters"]
                 hint_prompt = summarize_prompt.format(**context_base_summarize)
-                summarize_result = await use_llm_func(hint_prompt)
+                summarize_result = await use_llm_func(
+                    hint_prompt,
+                    stage="cluster_summary",
+                    max_tokens=_get_stage_max_tokens(global_config, "cluster_summary"),
+                )
                 chunk_key = ""
                 # resolve results
                 records = split_string_by_multi_markers(                                            # split entities from result --> list of entities

@@ -17,6 +17,13 @@ global_openai_async_client = None
 global_azure_openai_async_client = None
 
 
+def _strip_internal_chat_kwargs(kwargs: dict):
+    kwargs.pop("stage", None)
+    kwargs.pop("telemetry", None)
+    kwargs.pop("benchmark_label", None)
+    return kwargs
+
+
 def get_openai_async_client_instance():
     global global_openai_async_client
     if global_openai_async_client is None:
@@ -40,6 +47,7 @@ async def openai_complete_if_cache(
     model, prompt, system_prompt=None, history_messages=[], **kwargs
 ) -> str:
     openai_async_client = get_openai_async_client_instance()
+    kwargs = _strip_internal_chat_kwargs(kwargs)
     hashing_kv: BaseKVStorage = kwargs.pop("hashing_kv", None)
     messages = []
     if system_prompt:
@@ -122,6 +130,7 @@ async def azure_openai_complete_if_cache(
     deployment_name, prompt, system_prompt=None, history_messages=[], **kwargs
 ) -> str:
     azure_openai_client = get_azure_openai_async_client_instance()
+    kwargs = _strip_internal_chat_kwargs(kwargs)
     hashing_kv: BaseKVStorage = kwargs.pop("hashing_kv", None)
     messages = []
     if system_prompt:

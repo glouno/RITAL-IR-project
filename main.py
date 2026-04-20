@@ -11,12 +11,15 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import tiktoken
 from dotenv import load_dotenv
 
 from hirag import HiRAG, QueryParam
 from hirag._storage import NetworkXStorage
 from hirag._utils import compute_args_hash, wrap_embedding_func_with_attrs
 from hirag.base import BaseKVStorage
+from hirag.regimes import PROMPT_REGIME_CHOICES, resolve_prompts
+from hirag.telemetry import new_telemetry_session, record_llm_call, summarize_telemetry
 
 
 LOGGER = logging.getLogger("HiRAG.main")
@@ -46,6 +49,13 @@ def env_int_or_none(name: str) -> int | None:
     return int(value.strip())
 
 
+def env_path(name: str) -> str | None:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return None
+    return value.strip()
+
+
 def env_bool(name: str, default: bool = False) -> bool:
     value = os.getenv(name)
     if value is None:
@@ -60,19 +70,25 @@ def env_bool(name: str, default: bool = False) -> bool:
 
 
 def discover_local_chat_model(base_url: str, api_key: str) -> str | None:
+    model_id, _ = discover_local_chat_model_info(base_url, api_key)
+    return model_id
+
+
+def discover_local_chat_model_info(base_url: str, api_key: str) -> tuple[str | None, int | None]:
     try:
         openai_module = importlib.import_module("openai")
         client = openai_module.OpenAI(base_url=base_url, api_key=api_key)
         models = client.models.list()
     except Exception as exc:
         LOGGER.warning("Unable to discover model from %s: %s", base_url, exc)
-        return None
+        return None, None
 
     for item in getattr(models, "data", []):
         model_id = getattr(item, "id", None)
         if isinstance(model_id, str) and model_id.strip():
-            return model_id.strip()
-    return None
+            max_model_len = getattr(item, "max_model_len", None)
+            return model_id.strip(), int(max_model_len) if max_model_len is not None else None
+    return None, None
 
 
 def parse_int_or_none(value: Any) -> int | None:
@@ -175,6 +191,7 @@ def create_fastembed_embedding(runtime: dict[str, Any]) -> Any:
 def create_vllm_chat_model(runtime: dict[str, Any]) -> Any:
     openai_module = importlib.import_module("openai")
     openai_async_client: Any | None = None
+    token_encoder = tiktoken.get_encoding("cl100k_base")
 
     def get_async_client() -> Any:
         nonlocal openai_async_client
@@ -193,6 +210,9 @@ def create_vllm_chat_model(runtime: dict[str, Any]) -> Any:
         history_messages: list[dict[str, str]] | None = None,
         **kwargs: Any,
     ) -> str:
+        stage = kwargs.pop("stage", "unspecified")
+        telemetry = kwargs.pop("telemetry", runtime.get("telemetry"))
+        benchmark_label = kwargs.pop("benchmark_label", runtime.get("benchmark_label"))
         client = get_async_client()
         messages: list[dict[str, str]] = []
         if system_prompt:
@@ -200,6 +220,21 @@ def create_vllm_chat_model(runtime: dict[str, Any]) -> Any:
         if history_messages:
             messages.extend(history_messages)
         messages.append({"role": "user", "content": prompt})
+        requested_max_tokens = kwargs.get("max_tokens")
+        model_max_context = runtime.get("model_max_context")
+        if requested_max_tokens is not None and model_max_context:
+            safety_buffer = 256
+            prompt_tokens_estimate = sum(
+                len(token_encoder.encode(message["content"])) for message in messages
+            )
+            safe_max_tokens = max(
+                1,
+                min(
+                    int(requested_max_tokens),
+                    int(model_max_context) - prompt_tokens_estimate - safety_buffer,
+                ),
+            )
+            kwargs["max_tokens"] = safe_max_tokens
 
         hashing_kv: BaseKVStorage | None = kwargs.pop("hashing_kv", None)
         args_hash: str | None = None
@@ -207,14 +242,64 @@ def create_vllm_chat_model(runtime: dict[str, Any]) -> Any:
             args_hash = compute_args_hash(runtime["chat_model"], messages)
             cached = await hashing_kv.get_by_id(args_hash)
             if cached is not None:
+                cached_content = cached["return"]
+                estimated_prompt_tokens = sum(
+                    len(token_encoder.encode(message["content"])) for message in messages
+                )
+                estimated_completion_tokens = len(token_encoder.encode(cached_content))
+                record_llm_call(
+                    telemetry,
+                    {
+                        "stage": stage,
+                        "benchmark_label": benchmark_label,
+                        "cache_hit": True,
+                        "prompt_tokens": estimated_prompt_tokens,
+                        "completion_tokens": estimated_completion_tokens,
+                        "total_tokens": estimated_prompt_tokens + estimated_completion_tokens,
+                        "latency_seconds": 0.0,
+                        "finish_reason": "cache",
+                        "model": runtime["chat_model"],
+                    },
+                )
                 return cached["return"]
 
+        start = time.perf_counter()
         response = await client.chat.completions.create(
             model=runtime["chat_model"],
             messages=messages,
             **kwargs,
         )
+        latency_seconds = time.perf_counter() - start
         content = response.choices[0].message.content or ""
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            prompt_tokens = sum(
+                len(token_encoder.encode(message["content"])) for message in messages
+            )
+            completion_tokens = len(token_encoder.encode(content))
+            total_tokens = prompt_tokens + completion_tokens
+        else:
+            prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+            completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+            total_tokens = int(getattr(usage, "total_tokens", 0) or 0)
+
+        finish_reason = None
+        if getattr(response, "choices", None):
+            finish_reason = getattr(response.choices[0], "finish_reason", None)
+        record_llm_call(
+            telemetry,
+            {
+                "stage": stage,
+                "benchmark_label": benchmark_label,
+                "cache_hit": False,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "latency_seconds": latency_seconds,
+                "finish_reason": finish_reason,
+                "model": runtime["chat_model"],
+            },
+        )
 
         if hashing_kv is not None and args_hash is not None:
             await hashing_kv.upsert(
@@ -249,6 +334,8 @@ def parse_args() -> argparse.Namespace:
     default_disable_llm_cache = env_bool("DISABLE_LLM_CACHE", False)
     default_disable_hierachical_mode = env_bool("DISABLE_HIERACHICAL_MODE", False)
     default_disable_naive_rag = env_bool("DISABLE_NAIVE_RAG", False)
+    default_prompt_regime = env_str("PROMPT_REGIME", "baseline")
+    default_entity_extract_max_gleaning = env_int_or_none("ENTITY_EXTRACT_MAX_GLEANING")
     default_query = env_str("QUERY")
     default_query_mode = env_str("QUERY_MODE", "hi")
     default_log_level = env_str("LOG_LEVEL", "INFO")
@@ -256,6 +343,8 @@ def parse_args() -> argparse.Namespace:
     default_datasets_path = env_str("DATASETS_PATH")
     default_knowledge_graph_path = env_str("KNOWLEDGE_GRAPH_PATH")
     default_graph_vis_path = env_str("GRAPH_VIS_PATH")
+    default_telemetry_output = env_path("TELEMETRY_OUTPUT")
+    default_benchmark_label = env_str("BENCHMARK_LABEL")
 
     query_mode_choices = [
         "hi",
@@ -408,6 +497,19 @@ def parse_args() -> argparse.Namespace:
         help="Disable naive RAG mode",
     )
     parser.add_argument(
+        "--prompt-regime",
+        type=str,
+        default=default_prompt_regime,
+        choices=PROMPT_REGIME_CHOICES,
+        help="Prompt regime preset used for HiRAG generation stages",
+    )
+    parser.add_argument(
+        "--entity-extract-max-gleaning",
+        type=int,
+        default=default_entity_extract_max_gleaning,
+        help="Override entity/relation gleaning iterations; default depends on prompt regime",
+    )
+    parser.add_argument(
         "--query",
         type=str,
         default=default_query,
@@ -427,7 +529,98 @@ def parse_args() -> argparse.Namespace:
         choices=log_level_choices,
         help="Logging level",
     )
+    parser.add_argument(
+        "--telemetry-output",
+        type=str,
+        default=default_telemetry_output,
+        help="Optional path for machine-readable telemetry JSON",
+    )
+    parser.add_argument(
+        "--benchmark-label",
+        type=str,
+        default=default_benchmark_label,
+        help="Optional label stored in telemetry and benchmark outputs",
+    )
     return parser.parse_args()
+
+
+def resolve_context_file(args: argparse.Namespace) -> Path:
+    context_file = Path(args.context_file)
+    if not context_file.exists() and not context_file.is_absolute():
+        candidate = Path(args.datasets_path) / args.context_file
+        if candidate.exists() and candidate.is_file():
+            context_file = candidate
+    if not context_file.exists() or not context_file.is_file():
+        raise FileNotFoundError(f"Context file not found: {context_file}")
+    return context_file
+
+
+def create_graph_working_dir(args: argparse.Namespace) -> Path:
+    Path(args.knowledge_graph_path).mkdir(parents=True, exist_ok=True)
+    Path(args.graph_vis_path).mkdir(parents=True, exist_ok=True)
+
+    current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    graph_working_dir = (
+        Path(args.knowledge_graph_path) / f"{args.graph_name}_{current_timestamp}"
+    )
+    graph_working_dir.mkdir(parents=True, exist_ok=True)
+    return graph_working_dir
+
+
+def build_graph_runtime(
+    args: argparse.Namespace,
+    *,
+    graph_working_dir: Path,
+    telemetry: dict[str, Any] | None = None,
+    stage_max_token_overrides: dict[str, int] | None = None,
+) -> tuple[HiRAG, dict[str, Any]]:
+    discovered_model, discovered_context = discover_local_chat_model_info(
+        args.base_url, args.api_key
+    )
+    chat_model = args.chat_model or discovered_model
+    if not chat_model:
+        raise RuntimeError(
+            "No chat model available. Set --chat-model or VLLM_CHAT_MODEL, "
+            "or ensure local vLLM exposes /models."
+        )
+    model_max_context = discovered_context
+
+    runtime = {
+        "base_url": args.base_url,
+        "api_key": args.api_key,
+        "chat_model": chat_model,
+        "embed_model": args.embed_model,
+        "embed_dim": args.embed_dim,
+        "max_token_size": args.max_token_size,
+        "fastembed_threads": args.fastembed_threads,
+        "fastembed_parallel": args.fastembed_parallel,
+        "fastembed_cache_path": args.fastembed_cache_path,
+        "telemetry": telemetry,
+        "benchmark_label": args.benchmark_label,
+        "model_max_context": model_max_context,
+    }
+
+    embedding_func = create_fastembed_embedding(runtime)
+    llm_func = create_vllm_chat_model(runtime)
+    prompts = resolve_prompts(args.prompt_regime)
+
+    graph_func = HiRAG(
+        working_dir=str(graph_working_dir),
+        enable_llm_cache=not args.disable_llm_cache,
+        embedding_func=embedding_func,
+        best_model_func=llm_func,
+        cheap_model_func=llm_func,
+        enable_hierachical_mode=not args.disable_hierachical_mode,
+        embedding_batch_num=args.embedding_batch_num,
+        embedding_func_max_async=args.embedding_func_max_async,
+        enable_naive_rag=not args.disable_naive_rag,
+        graph_storage_cls=NetworkXStorage,
+        prompt_regime=args.prompt_regime,
+        prompts=prompts,
+        stage_max_tokens=stage_max_token_overrides or {},
+        entity_extract_max_gleaning=args.entity_extract_max_gleaning,
+    )
+    return graph_func, runtime
 
 
 def main() -> None:
@@ -441,58 +634,12 @@ def main() -> None:
     if not args.graph_name:
         raise ValueError("GRAPH_NAME cannot be empty.")
 
-    Path(args.knowledge_graph_path).mkdir(parents=True, exist_ok=True)
-    Path(args.graph_vis_path).mkdir(parents=True, exist_ok=True)
-
-    current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    graph_working_dir = (
-        Path(args.knowledge_graph_path) / f"{args.graph_name}_{current_timestamp}"
-    )
-    graph_working_dir.mkdir(parents=True, exist_ok=True)
-
-    context_file = Path(args.context_file)
-    if not context_file.exists() and not context_file.is_absolute():
-        candidate = Path(args.datasets_path) / args.context_file
-        if candidate.exists() and candidate.is_file():
-            context_file = candidate
-    if not context_file.exists() or not context_file.is_file():
-        raise FileNotFoundError(f"Context file not found: {context_file}")
-
+    graph_working_dir = create_graph_working_dir(args)
+    context_file = resolve_context_file(args)
     context_input = load_context_input(context_file)
-
-    chat_model = args.chat_model or discover_local_chat_model(args.base_url, args.api_key)
-    if not chat_model:
-        raise RuntimeError(
-            "No chat model available. Set --chat-model or VLLM_CHAT_MODEL, "
-            "or ensure local vLLM exposes /models."
-        )
-
-    runtime = {
-        "base_url": args.base_url,
-        "api_key": args.api_key,
-        "chat_model": chat_model,
-        "embed_model": args.embed_model,
-        "embed_dim": args.embed_dim,
-        "max_token_size": args.max_token_size,
-        "fastembed_threads": args.fastembed_threads,
-        "fastembed_parallel": args.fastembed_parallel,
-        "fastembed_cache_path": args.fastembed_cache_path,
-    }
-
-    embedding_func = create_fastembed_embedding(runtime)
-    llm_func = create_vllm_chat_model(runtime)
-
-    graph_func = HiRAG(
-        working_dir=str(graph_working_dir),
-        enable_llm_cache=not args.disable_llm_cache,
-        embedding_func=embedding_func,
-        best_model_func=llm_func,
-        cheap_model_func=llm_func,
-        enable_hierachical_mode=not args.disable_hierachical_mode,
-        embedding_batch_num=args.embedding_batch_num,
-        embedding_func_max_async=args.embedding_func_max_async,
-        enable_naive_rag=not args.disable_naive_rag,
-        graph_storage_cls=NetworkXStorage,
+    telemetry = new_telemetry_session(args.benchmark_label)
+    graph_func, runtime = build_graph_runtime(
+        args, graph_working_dir=graph_working_dir, telemetry=telemetry
     )
 
     print(
@@ -500,6 +647,8 @@ def main() -> None:
         f"chat_model={runtime['chat_model']} | "
         f"vllm_base_url={runtime['base_url']} | "
         f"embed_model={runtime['embed_model']} | "
+        f"prompt_regime={args.prompt_regime} | "
+        f"entity_extract_max_gleaning={graph_func.entity_extract_max_gleaning} | "
         f"graph_dir={graph_working_dir}"
     )
 
@@ -515,6 +664,19 @@ def main() -> None:
         print("Perform hi search:")
         result = graph_func.query(args.query, param=QueryParam(mode=args.query_mode))
         print(result)
+
+    if args.telemetry_output:
+        telemetry_payload = {
+            "benchmark_label": args.benchmark_label,
+            "prompt_regime": args.prompt_regime,
+            "entity_extract_max_gleaning": graph_func.entity_extract_max_gleaning,
+            "graph_dir": str(graph_working_dir),
+            "context_file": str(context_file),
+            **summarize_telemetry(telemetry),
+        }
+        output_path = Path(args.telemetry_output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(telemetry_payload, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

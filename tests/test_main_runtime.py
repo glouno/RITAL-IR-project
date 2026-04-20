@@ -128,6 +128,14 @@ class MainRuntimeTests(unittest.TestCase):
             "lean",
             "--entity-extract-max-gleaning",
             "0",
+            "--best-model-max-async",
+            "4",
+            "--cheap-model-max-async",
+            "6",
+            "--community-report-input-max-tokens",
+            "7000",
+            "--cluster-summary-input-max-tokens",
+            "5000",
             "--telemetry-output",
             "/tmp/test-telemetry.json",
             "--benchmark-label",
@@ -138,6 +146,10 @@ class MainRuntimeTests(unittest.TestCase):
 
         self.assertEqual(args.prompt_regime, "lean")
         self.assertEqual(args.entity_extract_max_gleaning, 0)
+        self.assertEqual(args.best_model_max_async, 4)
+        self.assertEqual(args.cheap_model_max_async, 6)
+        self.assertEqual(args.community_report_input_max_tokens, 7000)
+        self.assertEqual(args.cluster_summary_input_max_tokens, 5000)
         self.assertEqual(args.telemetry_output, "/tmp/test-telemetry.json")
         self.assertEqual(args.benchmark_label, "demo")
 

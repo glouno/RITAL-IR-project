@@ -16,7 +16,12 @@ from .base import (
     BaseKVStorage,
     BaseVectorStorage
 )
-from ._utils import split_string_by_multi_markers, clean_str, is_float_regex
+from ._utils import (
+    split_string_by_multi_markers,
+    clean_str,
+    is_float_regex,
+    truncate_list_by_token_size,
+)
 from .prompt import PROMPTS
 
 # Initialize logging
@@ -283,6 +288,15 @@ class Hierarchical_Clustering(ClusteringAlgorithm):
                     discount_times += 1
                 # summarize and generate new entities
                 entity_description_list = [f"({x['entity_name']}, {x['description']})" for x in cluster_nodes]
+                cluster_input_max_tokens = global_config.get(
+                    "cluster_summary_input_max_tokens",
+                    global_config["best_model_max_token_size"],
+                )
+                entity_description_list = truncate_list_by_token_size(
+                    entity_description_list,
+                    key=lambda x: x,
+                    max_token_size=cluster_input_max_tokens,
+                )
                 context_base_summarize = dict(
                     tuple_delimiter=prompts["DEFAULT_TUPLE_DELIMITER"],
                     record_delimiter=prompts["DEFAULT_RECORD_DELIMITER"],

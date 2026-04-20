@@ -1,6 +1,11 @@
 import unittest
+from argparse import Namespace
 
-from eval.benchmark_regimes import make_run_record, parse_stage_max_token_overrides
+from eval.benchmark_regimes import (
+    build_preflight_summary,
+    make_run_record,
+    parse_stage_max_token_overrides,
+)
 from hirag.regimes import expand_benchmark_variants
 
 
@@ -33,6 +38,11 @@ class BenchmarkRegimeTests(unittest.TestCase):
                 "relation_count": 30,
                 "community_count": 4,
             },
+            best_model_max_async=8,
+            cheap_model_max_async=8,
+            community_report_input_max_tokens=8192,
+            cluster_summary_input_max_tokens=6144,
+            preflight={"variant": "lean"},
         )
         for key in (
             "variant",
@@ -46,11 +56,36 @@ class BenchmarkRegimeTests(unittest.TestCase):
             "relation_count",
             "community_count",
             "cache_hit_count",
+            "best_model_max_async",
+            "cheap_model_max_async",
+            "community_report_input_max_tokens",
+            "cluster_summary_input_max_tokens",
             "per_stage",
+            "preflight",
             "telemetry",
             "smoke_queries",
         ):
             self.assertIn(key, record)
+
+    def test_preflight_summary_shape(self) -> None:
+        args = Namespace(
+            best_model_max_async=8,
+            cheap_model_max_async=8,
+            community_report_input_max_tokens=8192,
+            cluster_summary_input_max_tokens=6144,
+        )
+        variant = {"name": "lean", "prompt_regime": "lean", "entity_extract_max_gleaning": 0}
+        preflight = build_preflight_summary(
+            variant=variant,
+            args=args,
+            context_input=["short context"],
+            model_max_context=12288,
+            stage_max_token_overrides={},
+        )
+        self.assertEqual(preflight["variant"], "lean")
+        self.assertEqual(preflight["best_model_max_async"], 8)
+        self.assertIn("entity_extract", preflight["stages"])
+        self.assertIn("community_report", preflight["stages"])
 
 
 if __name__ == "__main__":

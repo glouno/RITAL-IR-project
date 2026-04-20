@@ -328,9 +328,17 @@ def parse_args() -> argparse.Namespace:
     default_embedding_func_max_async = env_int(
         "EMBEDDING_FUNC_MAX_ASYNC", 8
     )
+    default_best_model_max_async = env_int("BEST_MODEL_MAX_ASYNC", 8)
+    default_cheap_model_max_async = env_int("CHEAP_MODEL_MAX_ASYNC", 8)
     default_fastembed_threads = env_int_or_none("FASTEMBED_THREADS")
     default_fastembed_parallel = env_int_or_none("FASTEMBED_PARALLEL")
     default_fastembed_cache_path = env_str("FASTEMBED_CACHE_PATH")
+    default_community_report_input_max_tokens = env_int(
+        "COMMUNITY_REPORT_INPUT_MAX_TOKENS", 8192
+    )
+    default_cluster_summary_input_max_tokens = env_int(
+        "CLUSTER_SUMMARY_INPUT_MAX_TOKENS", 6144
+    )
     default_disable_llm_cache = env_bool("DISABLE_LLM_CACHE", False)
     default_disable_hierachical_mode = env_bool("DISABLE_HIERACHICAL_MODE", False)
     default_disable_naive_rag = env_bool("DISABLE_NAIVE_RAG", False)
@@ -461,6 +469,18 @@ def parse_args() -> argparse.Namespace:
         help="Maximum parallel embedding calls in HiRAG",
     )
     parser.add_argument(
+        "--best-model-max-async",
+        type=int,
+        default=default_best_model_max_async,
+        help="Maximum in-flight best-model LLM calls",
+    )
+    parser.add_argument(
+        "--cheap-model-max-async",
+        type=int,
+        default=default_cheap_model_max_async,
+        help="Maximum in-flight cheap-model LLM calls",
+    )
+    parser.add_argument(
         "--fastembed-threads",
         type=int,
         default=default_fastembed_threads,
@@ -541,6 +561,18 @@ def parse_args() -> argparse.Namespace:
         default=default_benchmark_label,
         help="Optional label stored in telemetry and benchmark outputs",
     )
+    parser.add_argument(
+        "--community-report-input-max-tokens",
+        type=int,
+        default=default_community_report_input_max_tokens,
+        help="Input packing cap for community report generation",
+    )
+    parser.add_argument(
+        "--cluster-summary-input-max-tokens",
+        type=int,
+        default=default_cluster_summary_input_max_tokens,
+        help="Input packing cap for cluster summary generation",
+    )
     return parser.parse_args()
 
 
@@ -613,12 +645,16 @@ def build_graph_runtime(
         enable_hierachical_mode=not args.disable_hierachical_mode,
         embedding_batch_num=args.embedding_batch_num,
         embedding_func_max_async=args.embedding_func_max_async,
+        best_model_max_async=args.best_model_max_async,
+        cheap_model_max_async=args.cheap_model_max_async,
         enable_naive_rag=not args.disable_naive_rag,
         graph_storage_cls=NetworkXStorage,
         prompt_regime=args.prompt_regime,
         prompts=prompts,
         stage_max_tokens=stage_max_token_overrides or {},
         entity_extract_max_gleaning=args.entity_extract_max_gleaning,
+        community_report_input_max_tokens=args.community_report_input_max_tokens,
+        cluster_summary_input_max_tokens=args.cluster_summary_input_max_tokens,
     )
     return graph_func, runtime
 
@@ -649,6 +685,10 @@ def main() -> None:
         f"embed_model={runtime['embed_model']} | "
         f"prompt_regime={args.prompt_regime} | "
         f"entity_extract_max_gleaning={graph_func.entity_extract_max_gleaning} | "
+        f"best_model_max_async={graph_func.best_model_max_async} | "
+        f"cheap_model_max_async={graph_func.cheap_model_max_async} | "
+        f"community_report_input_max_tokens={graph_func.community_report_input_max_tokens} | "
+        f"cluster_summary_input_max_tokens={graph_func.cluster_summary_input_max_tokens} | "
         f"graph_dir={graph_working_dir}"
     )
 
@@ -670,6 +710,10 @@ def main() -> None:
             "benchmark_label": args.benchmark_label,
             "prompt_regime": args.prompt_regime,
             "entity_extract_max_gleaning": graph_func.entity_extract_max_gleaning,
+            "best_model_max_async": graph_func.best_model_max_async,
+            "cheap_model_max_async": graph_func.cheap_model_max_async,
+            "community_report_input_max_tokens": graph_func.community_report_input_max_tokens,
+            "cluster_summary_input_max_tokens": graph_func.cluster_summary_input_max_tokens,
             "graph_dir": str(graph_working_dir),
             "context_file": str(context_file),
             **summarize_telemetry(telemetry),

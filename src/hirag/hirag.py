@@ -127,6 +127,9 @@ class HiRAG:
     cheap_model_func: callable = gpt_35_turbo_complete
     cheap_model_max_token_size: int = 32768
     cheap_model_max_async: int = 8
+    community_report_input_max_tokens: int = 8192
+    cluster_summary_input_max_tokens: int = 6144
+    entity_extract_input_max_tokens: int | None = None
 
     # entity extraction
     entity_extraction_func: callable = extract_entities

@@ -3,11 +3,14 @@ import copy
 import importlib.util
 import json
 import time
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 from hirag import QueryParam
-from hirag.regimes import STAGE_NAMES, expand_benchmark_variants
+from hirag._op import estimate_community_describe_tokens, get_chunks
+from hirag._utils import encode_string_by_tiktoken
+from hirag.regimes import STAGE_NAMES, expand_benchmark_variants, resolve_prompts
 from hirag.telemetry import new_telemetry_session, summarize_telemetry
 
 
@@ -67,6 +70,18 @@ def parse_args() -> argparse.Namespace:
         default=8,
         help="Maximum parallel embedding calls",
     )
+    parser.add_argument(
+        "--best-model-max-async",
+        type=int,
+        default=8,
+        help="Maximum in-flight best-model LLM calls",
+    )
+    parser.add_argument(
+        "--cheap-model-max-async",
+        type=int,
+        default=8,
+        help="Maximum in-flight cheap-model LLM calls",
+    )
     parser.add_argument("--fastembed-threads", type=int, default=None, help="FastEmbed threads")
     parser.add_argument("--fastembed-parallel", type=int, default=None, help="FastEmbed parallel workers")
     parser.add_argument(
@@ -109,6 +124,23 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=[],
         help="Optional stage override in stage=value form; may be repeated",
+    )
+    parser.add_argument(
+        "--community-report-input-max-tokens",
+        type=int,
+        default=8192,
+        help="Input packing cap for community report generation",
+    )
+    parser.add_argument(
+        "--cluster-summary-input-max-tokens",
+        type=int,
+        default=6144,
+        help="Input packing cap for cluster summary generation",
+    )
+    parser.add_argument(
+        "--preflight-only",
+        action="store_true",
+        help="Estimate request sizes and safety without running indexing",
     )
     return parser.parse_args()
 
@@ -172,6 +204,128 @@ def load_smoke_queries(smoke_query_file: str | None, limit: int | None) -> list[
     return queries
 
 
+def estimate_stage_prompt_tokens(
+    prompt_template: str,
+    *,
+    input_tokens: int,
+    replacements: dict[str, str],
+) -> int:
+    prompt_text = prompt_template.format_map(defaultdict(str, replacements))
+    return len(encode_string_by_tiktoken(prompt_text)) + input_tokens
+
+
+def summarize_context_chunking(context_input: str | list[str]) -> dict[str, int]:
+    contexts = context_input if isinstance(context_input, list) else [context_input]
+    docs = {f"doc-{index}": {"content": text} for index, text in enumerate(contexts)}
+    chunks = get_chunks(docs)
+    max_chunk_tokens = 0
+    for chunk in chunks.values():
+        max_chunk_tokens = max(max_chunk_tokens, int(chunk.get("tokens", 0) or 0))
+    return {
+        "context_count": len(contexts),
+        "chunk_count": len(chunks),
+        "max_chunk_tokens": max_chunk_tokens,
+    }
+
+
+def build_preflight_summary(
+    *,
+    variant: dict[str, Any],
+    args: argparse.Namespace,
+    context_input: str | list[str],
+    model_max_context: int | None,
+    stage_max_token_overrides: dict[str, int],
+) -> dict[str, Any]:
+    prompts = resolve_prompts(variant["prompt_regime"])
+    chunking = summarize_context_chunking(context_input)
+    safety_limit = (
+        max(1, model_max_context - 512) if model_max_context is not None else None
+    )
+
+    entity_prompt_tokens = estimate_stage_prompt_tokens(
+        prompts["hi_entity_extraction"],
+        input_tokens=chunking["max_chunk_tokens"],
+        replacements={
+            "tuple_delimiter": prompts["DEFAULT_TUPLE_DELIMITER"],
+            "record_delimiter": prompts["DEFAULT_RECORD_DELIMITER"],
+            "completion_delimiter": prompts["DEFAULT_COMPLETION_DELIMITER"],
+            "entity_types": ",".join(prompts["META_ENTITY_TYPES"]),
+            "input_text": "",
+        },
+    )
+    relation_prompt_tokens = estimate_stage_prompt_tokens(
+        prompts["hi_relation_extraction"],
+        input_tokens=chunking["max_chunk_tokens"],
+        replacements={
+            "tuple_delimiter": prompts["DEFAULT_TUPLE_DELIMITER"],
+            "record_delimiter": prompts["DEFAULT_RECORD_DELIMITER"],
+            "completion_delimiter": prompts["DEFAULT_COMPLETION_DELIMITER"],
+            "entity_types": ",".join(prompts["META_ENTITY_TYPES"]),
+            "input_text": "",
+        },
+    )
+    cluster_prompt_tokens = estimate_stage_prompt_tokens(
+        prompts["summary_clusters"],
+        input_tokens=args.cluster_summary_input_max_tokens,
+        replacements={
+            "tuple_delimiter": prompts["DEFAULT_TUPLE_DELIMITER"],
+            "record_delimiter": prompts["DEFAULT_RECORD_DELIMITER"],
+            "completion_delimiter": prompts["DEFAULT_COMPLETION_DELIMITER"],
+            "meta_attribute_list": prompts["META_ENTITY_TYPES"],
+            "entity_description_list": "",
+        },
+    )
+    community_prompt_tokens = estimate_community_describe_tokens(
+        prompts["community_report"],
+        args.community_report_input_max_tokens,
+    )
+
+    stage_estimates = {
+        "entity_extract": {
+            "estimated_prompt_tokens": entity_prompt_tokens,
+            "estimated_input_tokens": chunking["max_chunk_tokens"],
+            "configured_output_max_tokens": stage_max_token_overrides.get("entity_extract"),
+        },
+        "relation_extract": {
+            "estimated_prompt_tokens": relation_prompt_tokens,
+            "estimated_input_tokens": chunking["max_chunk_tokens"],
+            "configured_output_max_tokens": stage_max_token_overrides.get("relation_extract"),
+        },
+        "cluster_summary": {
+            "estimated_prompt_tokens": cluster_prompt_tokens,
+            "estimated_input_tokens": args.cluster_summary_input_max_tokens,
+            "configured_output_max_tokens": stage_max_token_overrides.get("cluster_summary"),
+        },
+        "community_report": {
+            "estimated_prompt_tokens": community_prompt_tokens,
+            "estimated_input_tokens": args.community_report_input_max_tokens,
+            "configured_output_max_tokens": stage_max_token_overrides.get("community_report"),
+        },
+    }
+
+    for stage in stage_estimates.values():
+        if safety_limit is None:
+            stage["within_safety_margin"] = None
+        else:
+            stage["within_safety_margin"] = stage["estimated_prompt_tokens"] <= safety_limit
+
+    return {
+        "variant": variant["name"],
+        "prompt_regime": variant["prompt_regime"],
+        "entity_extract_max_gleaning": variant["entity_extract_max_gleaning"],
+        "context_count": chunking["context_count"],
+        "chunk_count": chunking["chunk_count"],
+        "max_chunk_tokens": chunking["max_chunk_tokens"],
+        "model_max_context": model_max_context,
+        "safety_limit_tokens": safety_limit,
+        "best_model_max_async": args.best_model_max_async,
+        "cheap_model_max_async": args.cheap_model_max_async,
+        "community_report_input_max_tokens": args.community_report_input_max_tokens,
+        "cluster_summary_input_max_tokens": args.cluster_summary_input_max_tokens,
+        "stages": stage_estimates,
+    }
+
+
 def collect_graph_metrics(graph_func) -> dict[str, int | None]:
     graph = getattr(graph_func.chunk_entity_relation_graph, "_graph", None)
     node_count = graph.number_of_nodes() if graph is not None else None
@@ -198,6 +352,11 @@ def make_run_record(
     indexing_seconds: float,
     telemetry_payload: dict[str, Any],
     graph_metrics: dict[str, int | None],
+    best_model_max_async: int,
+    cheap_model_max_async: int,
+    community_report_input_max_tokens: int,
+    cluster_summary_input_max_tokens: int,
+    preflight: dict[str, Any] | None = None,
     smoke_query_results: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     summary = telemetry_payload.get("summary", {})
@@ -213,7 +372,12 @@ def make_run_record(
         "relation_count": graph_metrics.get("relation_count"),
         "community_count": graph_metrics.get("community_count"),
         "cache_hit_count": summary.get("cache_hits", 0),
+        "best_model_max_async": best_model_max_async,
+        "cheap_model_max_async": cheap_model_max_async,
+        "community_report_input_max_tokens": community_report_input_max_tokens,
+        "cluster_summary_input_max_tokens": cluster_summary_input_max_tokens,
         "per_stage": summary.get("stages", {}),
+        "preflight": preflight,
         "telemetry": telemetry_payload,
         "smoke_queries": smoke_query_results or [],
     }
@@ -236,6 +400,13 @@ def run_variant(
     run_args.query_mode = "hi"
     run_args.benchmark_label = f"{variant['name']}-run{run_index + 1}"
     run_args.graph_name = f"{base_args.graph_name}_{variant['name']}_run{run_index + 1}"
+    preflight = build_preflight_summary(
+        variant=variant,
+        args=run_args,
+        context_input=context_input,
+        model_max_context=None,
+        stage_max_token_overrides=stage_max_token_overrides,
+    )
 
     graph_working_dir = create_graph_working_dir(run_args)
     telemetry = new_telemetry_session(run_args.benchmark_label)
@@ -280,6 +451,11 @@ def run_variant(
         indexing_seconds=indexing_seconds,
         telemetry_payload=telemetry_payload,
         graph_metrics=graph_metrics,
+        best_model_max_async=graph_func.best_model_max_async,
+        cheap_model_max_async=graph_func.cheap_model_max_async,
+        community_report_input_max_tokens=graph_func.community_report_input_max_tokens,
+        cluster_summary_input_max_tokens=graph_func.cluster_summary_input_max_tokens,
+        preflight=preflight,
         smoke_query_results=smoke_query_results,
     )
     print(
@@ -297,6 +473,46 @@ def main() -> None:
     variants = expand_benchmark_variants(args.variants)
     stage_max_token_overrides = parse_stage_max_token_overrides(args.stage_max_token)
     smoke_queries = load_smoke_queries(args.smoke_query_file, args.smoke_query_limit)
+    _, discovered_context = REPO_MAIN.discover_local_chat_model_info(
+        args.base_url, args.api_key
+    )
+
+    preflight = [
+        build_preflight_summary(
+            variant=variant,
+            args=args,
+            context_input=context_input,
+            model_max_context=discovered_context,
+            stage_max_token_overrides=stage_max_token_overrides,
+        )
+        for variant in variants
+    ]
+    for item in preflight:
+        stage_flags = ", ".join(
+            f"{stage}={'ok' if data['within_safety_margin'] is not False else 'risk'}"
+            for stage, data in item["stages"].items()
+        )
+        print(
+            f"[preflight:{item['variant']}] contexts={item['context_count']} "
+            f"chunks={item['chunk_count']} max_chunk_tokens={item['max_chunk_tokens']} "
+            f"safety_limit={item['safety_limit_tokens']} {stage_flags}"
+        )
+
+    if args.preflight_only:
+        report = {
+            "dataset": str(context_file),
+            "context_count": len(context_input) if isinstance(context_input, list) else 1,
+            "variants": [variant["name"] for variant in variants],
+            "preflight": preflight,
+            "repeat": 0,
+            "smoke_query_count": 0,
+            "runs": [],
+        }
+        output_path = Path(args.output_json)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(f"Preflight results written to {output_path}")
+        return
 
     runs = []
     for variant in variants:
@@ -318,6 +534,11 @@ def main() -> None:
         "variants": [variant["name"] for variant in variants],
         "repeat": args.repeat,
         "smoke_query_count": len(smoke_queries),
+        "best_model_max_async": args.best_model_max_async,
+        "cheap_model_max_async": args.cheap_model_max_async,
+        "community_report_input_max_tokens": args.community_report_input_max_tokens,
+        "cluster_summary_input_max_tokens": args.cluster_summary_input_max_tokens,
+        "preflight": preflight,
         "runs": runs,
     }
     output_path = Path(args.output_json)

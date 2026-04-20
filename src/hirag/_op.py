@@ -960,6 +960,13 @@ async def _pack_single_community_describe(
 ```"""
 
 
+def estimate_community_describe_tokens(
+    prompt_template: str, packed_input_tokens: int
+) -> int:
+    overhead_prompt = prompt_template.replace("{input_text}", "")
+    return len(encode_string_by_tiktoken(overhead_prompt)) + packed_input_tokens
+
+
 def _community_report_json_to_str(parsed_output: dict) -> str:
     """refer official graphrag: index/graph/extractors/community_reports"""
     title = parsed_output.get("title", "Report")
@@ -1009,7 +1016,10 @@ async def generate_community_report(
         describe = await _pack_single_community_describe(
             knwoledge_graph_inst,
             community,
-            max_token_size=global_config["best_model_max_token_size"],
+            max_token_size=global_config.get(
+                "community_report_input_max_tokens",
+                global_config["best_model_max_token_size"],
+            ),
             already_reports=already_reports,
             global_config=global_config,
         )

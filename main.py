@@ -223,7 +223,9 @@ def create_vllm_chat_model(runtime: dict[str, Any]) -> Any:
         requested_max_tokens = kwargs.get("max_tokens")
         model_max_context = runtime.get("model_max_context")
         if requested_max_tokens is not None and model_max_context:
-            safety_buffer = 256
+            # Keep a conservative buffer because local token estimation can differ
+            # from server-side counting by a few hundred tokens on long prompts.
+            safety_buffer = 1024
             prompt_tokens_estimate = sum(
                 len(token_encoder.encode(message["content"])) for message in messages
             )

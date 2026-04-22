@@ -116,3 +116,35 @@ Relevant files:
 - [tests/test_main_runtime.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_main_runtime.py)
 - [tests/test_benchmark_regimes.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_benchmark_regimes.py)
 - [`.env.example`](/home/paulbeglin/projects/RITAL-IR-project/.env.example)
+
+## Context Budget Hardening And Baseline Recovery
+
+### 2026-04-21
+
+Hardened local chat token budgeting after overnight long-run failures at the model context boundary.
+
+What changed:
+
+- Increased client-side response-token safety margin in the local OpenAI-compatible wrapper from `256` to `1024`
+- This specifically targets borderline failures where server-side token counting exceeded client estimates by a small margin
+- Result: long community-report calls should degrade gracefully by shrinking `max_tokens` instead of crashing the whole run on 12288-limit overflow
+
+Relevant files:
+
+- [main.py](/home/paulbeglin/projects/RITAL-IR-project/main.py)
+
+## Concise Community Prompt Format Fix
+
+### 2026-04-22
+
+Fixed a runtime crash during lean/ultra community report generation caused by Python `str.format` interpreting literal JSON braces in concise prompt templates.
+
+What changed:
+
+- Escaped literal JSON braces in concise community report prompt examples (`{{` / `}}`)
+- Prevents `KeyError` on keys such as `"title"` during `community_report_prompt.format(input_text=...)`
+- Enables lean/ultra runs to continue through community-report generation instead of aborting near the end
+
+Relevant files:
+
+- [src/hirag/prompt_concise.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/prompt_concise.py)

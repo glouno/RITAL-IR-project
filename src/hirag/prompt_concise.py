@@ -202,13 +202,13 @@ Output:
 LEAN_COMMUNITY_REPORT = """You are given entities and relationships for one community.
 
 Return a JSON object with this shape:
-{
+{{
   "title": "...",
   "summary": "...",
   "findings": [
-    {"summary": "...", "explanation": "..."}
+    {{"summary": "...", "explanation": "..."}}
   ]
-}
+}}
 
 Rules:
 - Ground everything in the provided data.
@@ -225,13 +225,13 @@ Output:
 ULTRA_LEAN_COMMUNITY_REPORT = """Return a grounded JSON object for the community.
 
 Schema:
-{
+{{
   "title": "...",
   "summary": "...",
   "findings": [
-    {"summary": "...", "explanation": "..."}
+    {{"summary": "...", "explanation": "..."}}
   ]
-}
+}}
 
 Rules:
 - Keep the summary short.

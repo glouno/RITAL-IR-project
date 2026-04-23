@@ -175,3 +175,27 @@ Relevant files:
 - [artifacts/agriculture_graphs_2026-04-23/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/README.md)
 - [artifacts/agriculture_graphs_2026-04-23/manifest.json](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/manifest.json)
 - [FORK_CHANGES.md](/home/paulbeglin/projects/RITAL-IR-project/FORK_CHANGES.md)
+
+## Neo4j Team Visualization Runbook
+
+### 2026-04-23
+
+Added teammate-facing documentation for exploring exported HiRAG graphs through Neo4j from personal laptops.
+
+What changed:
+
+- Added a step-by-step runbook in `docs/` for:
+  - connecting to an existing Neo4j instance through SSH tunnel
+  - understanding rootless Podman per-user visibility limits
+  - spinning up an isolated local Neo4j Podman container on alternate ports
+  - importing GraphML with APOC
+  - querying large graphs with bounded Cypher patterns to avoid browser freezes
+
+Why this matters:
+
+- makes graph exploration reproducible for teammates without relying on one user's container session
+- prevents accidental data collisions with other project databases (for example PMIND)
+
+Relevant files:
+
+- [docs/neo4j_graph_visualization_guide.md](/home/paulbeglin/projects/RITAL-IR-project/docs/neo4j_graph_visualization_guide.md)

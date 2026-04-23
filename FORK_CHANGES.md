@@ -148,3 +148,30 @@ What changed:
 Relevant files:
 
 - [src/hirag/prompt_concise.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/prompt_concise.py)
+
+## Curated Agriculture Graph Export
+
+### 2026-04-23
+
+Added a tracked, commit-ready export of the completed agriculture benchmark artifacts so results can be shared from GitHub without relying on ignored `.runs/` paths.
+
+What changed:
+
+- Added `artifacts/agriculture_graphs_2026-04-23/` with strategy-explicit GraphML filenames:
+  - `agriculture_baseline_no_glean.graphml`
+  - `agriculture_lean.graphml`
+  - `agriculture_ultra_lean.graphml`
+- Added curated JSON exports for community reports per strategy
+- Added the available benchmark summary JSON (`ultra_lean`) and run metadata logs
+- Added a folder-level README and manifest to map exported files back to source run directories
+
+Why this matters:
+
+- `.runs/` is gitignored and cannot be shared directly through normal commits
+- The curated folder keeps the most useful review artifacts (graph structure + reports + summary metadata) while excluding heavier internal caches/vector stores
+
+Relevant files:
+
+- [artifacts/agriculture_graphs_2026-04-23/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/README.md)
+- [artifacts/agriculture_graphs_2026-04-23/manifest.json](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/manifest.json)
+- [FORK_CHANGES.md](/home/paulbeglin/projects/RITAL-IR-project/FORK_CHANGES.md)

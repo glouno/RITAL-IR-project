@@ -1,0 +1,29 @@
+{
+  "dataset": "agriculture_unique_contexts",
+  "export_date": "2026-04-23",
+  "variants": [
+    {
+      "name": "baseline_no_glean",
+      "graphml": "graphs/agriculture_baseline_no_glean.graphml",
+      "community_reports": "metrics/agriculture_baseline_no_glean_community_reports.json",
+      "source_graph_dir": ".runs/2026-04-20-agri-night-fix/graphs/benchmark_baseline_no_glean_run1_20260420_203326"
+    },
+    {
+      "name": "lean",
+      "graphml": "graphs/agriculture_lean.graphml",
+      "community_reports": "metrics/agriculture_lean_community_reports.json",
+      "source_graph_dir": ".runs/2026-04-21-agri-resume/graphs/benchmark_lean_run1_20260422_001142"
+    },
+    {
+      "name": "ultra_lean",
+      "graphml": "graphs/agriculture_ultra_lean.graphml",
+      "community_reports": "metrics/agriculture_ultra_lean_community_reports.json",
+      "benchmark_summary": "metrics/agriculture_ultra_lean_benchmark_summary.json",
+      "source_graph_dir": ".runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326"
+    }
+  ],
+  "metadata_logs": [
+    "metadata/screen_resume.log",
+    "metadata/screen_resume2.log"
+  ]
+}

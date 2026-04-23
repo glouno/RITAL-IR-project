@@ -1,25 +1,10 @@
-import argparse
-import html
-import json
-import os
-from pathlib import Path
 
-import networkx as nx
-
-def graphml_to_json(graphml_file: str) -> str:
-    graph = nx.read_graphml(graphml_file)
-    data = nx.node_link_data(graph)
-    return json.dumps(data)
-
-def create_html(html_path: str, json_file_name: str = "graph_json.js", page_title: str = "Graph Visualization") -> None:
-    escaped_title = html.escape(page_title)
-    html_content = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>__PAGE_TITLE__</title>
+    <title>ultra_lean Graph Visualization</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body, html {
@@ -96,7 +81,7 @@ def create_html(html_path: str, json_file_name: str = "graph_json.js", page_titl
     <svg></svg>
     <div class="tooltip"></div>
     <div class="legend"></div>
-    <script type="text/javascript" src="./__JSON_FILE__"></script>
+    <script type="text/javascript" src="./ultra_lean_graph.js"></script>
     <script>
         const graphData = graphJson;
         const graphLinks = graphData.links || graphData.edges || [];
@@ -243,113 +228,4 @@ def create_html(html_path: str, json_file_name: str = "graph_json.js", page_titl
     </script>
 </body>
 </html>
-    '''
-
-    html_content = html_content.replace("__PAGE_TITLE__", escaped_title)
-    html_content = html_content.replace("__JSON_FILE__", json_file_name)
-
-    with open(html_path, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-
-def create_json(json_data: str, json_path: str) -> None:
-    json_data = "var graphJson = " + json_data
-    with open(json_path, 'w', encoding='utf-8') as f:
-        f.write(json_data)
-
-def visualize_graphml(graphml_file: str, html_path: str, json_file_name: str = "graph_json.js", page_title: str = "Graph Visualization") -> tuple[int, int]:
-    json_data = graphml_to_json(graphml_file)
-    graph = nx.read_graphml(graphml_file)
-    html_dir = os.path.dirname(html_path)
-    if not os.path.exists(html_dir):
-        os.makedirs(html_dir)
-    json_path = os.path.join(html_dir, json_file_name)
-    create_json(json_data, json_path)
-    create_html(html_path, json_file_name=json_file_name, page_title=page_title)
-    return graph.number_of_nodes(), graph.number_of_edges()
-
-
-def write_index(index_path: str, entries: list[dict[str, str]]) -> None:
-    rows = []
-    for entry in entries:
-        rows.append(
-            "<tr>"
-            f"<td>{html.escape(entry['name'])}</td>"
-            f"<td>{entry['nodes']}</td>"
-            f"<td>{entry['edges']}</td>"
-            f"<td><a href=\"{html.escape(entry['html'])}\">open</a></td>"
-            "</tr>"
-        )
-
-    content = (
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\">"
-        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
-        "<title>Graph Visualizations</title>"
-        "<style>body{font-family:Arial,sans-serif;margin:24px;}"
-        "table{border-collapse:collapse;width:100%;max-width:900px;}"
-        "th,td{border:1px solid #ddd;padding:8px;text-align:left;}"
-        "th{background:#f4f4f4;}"
-        "h1{margin-bottom:8px;}p{color:#444;}</style></head><body>"
-        "<h1>Graph Visualizations</h1>"
-        "<p>Generated from curated agriculture graph exports.</p>"
-        "<table><thead><tr><th>Variant</th><th>Nodes</th><th>Edges</th><th>Visualization</th></tr></thead>"
-        f"<tbody>{''.join(rows)}</tbody></table></body></html>"
-    )
-    with open(index_path, "w", encoding="utf-8") as handle:
-        handle.write(content)
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate D3 HTML visualizations from GraphML files")
-    parser.add_argument("--graphml", action="append", required=True, help="Input in name=path form; repeat for multiple graphs")
-    parser.add_argument("--output-dir", required=True, help="Directory where HTML and JS files are generated")
-    return parser.parse_args()
-
-
-def parse_graph_entry(item: str) -> tuple[str, str]:
-    if "=" not in item:
-        raise ValueError(f"Invalid --graphml format: {item}. Expected name=path")
-    name, path = item.split("=", 1)
-    name = name.strip()
-    path = path.strip()
-    if not name or not path:
-        raise ValueError(f"Invalid --graphml entry: {item}")
-    return name, path
-
-
-def slugify(text: str) -> str:
-    return "".join(ch if ch.isalnum() else "_" for ch in text.lower()).strip("_")
-
-
-def main() -> None:
-    args = parse_args()
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    entries: list[dict[str, str]] = []
-    for item in args.graphml:
-        name, graph_path = parse_graph_entry(item)
-        slug = slugify(name)
-        html_name = f"{slug}.html"
-        json_name = f"{slug}_graph.js"
-        html_path = str(output_dir / html_name)
-        nodes, edges = visualize_graphml(
-            graph_path,
-            html_path,
-            json_file_name=json_name,
-            page_title=f"{name} Graph Visualization",
-        )
-        entries.append({
-            "name": name,
-            "nodes": str(nodes),
-            "edges": str(edges),
-            "html": html_name,
-        })
-        print(f"Generated {html_path} ({nodes} nodes, {edges} edges)")
-
-    index_path = output_dir / "index.html"
-    write_index(str(index_path), entries)
-    print(f"Generated {index_path}")
-
-
-if __name__ == "__main__":
-    main()
+    

@@ -16,6 +16,7 @@ tmp/
 legacy/
 CACHEDIR.TAG
 .runs/
+.neo4j-rital/
 
 # Env file
 .env

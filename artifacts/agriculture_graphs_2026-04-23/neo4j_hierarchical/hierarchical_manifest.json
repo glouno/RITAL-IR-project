@@ -1,0 +1,44 @@
+{
+  "source_manifest": "/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/manifest.json",
+  "output_dir": "/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical",
+  "runs": [
+    {
+      "variant": "baseline_no_glean",
+      "output_graphml": "/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/agriculture_baseline_no_glean_hierarchical.graphml",
+      "entity_nodes": 11026,
+      "community_nodes": 2106,
+      "total_nodes": 13132,
+      "relates_to_edges": 14938,
+      "in_community_edges": 24875,
+      "has_subcommunity_edges": 2056,
+      "total_edges": 41869
+    },
+    {
+      "variant": "lean",
+      "output_graphml": "/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/agriculture_lean_hierarchical.graphml",
+      "entity_nodes": 11693,
+      "community_nodes": 2055,
+      "total_nodes": 13748,
+      "relates_to_edges": 13823,
+      "in_community_edges": 23564,
+      "has_subcommunity_edges": 1990,
+      "total_edges": 39377
+    },
+    {
+      "variant": "ultra_lean",
+      "output_graphml": "/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/agriculture_ultra_lean_hierarchical.graphml",
+      "entity_nodes": 13179,
+      "community_nodes": 2282,
+      "total_nodes": 15461,
+      "relates_to_edges": 15604,
+      "in_community_edges": 27178,
+      "has_subcommunity_edges": 2217,
+      "total_edges": 44999
+    }
+  ],
+  "notes": [
+    "RELATES_TO edges come from original GraphML edges",
+    "IN_COMMUNITY and HAS_SUBCOMMUNITY come from community_reports.json",
+    "description_clean strips internal <SEP> for readability"
+  ]
+}

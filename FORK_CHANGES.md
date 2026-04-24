@@ -199,3 +199,33 @@ Why this matters:
 Relevant files:
 
 - [docs/neo4j_graph_visualization_guide.md](/home/paulbeglin/projects/RITAL-IR-project/docs/neo4j_graph_visualization_guide.md)
+
+## Hierarchical Neo4j Graph Artifacts
+
+### 2026-04-25
+
+Added generated graph artifacts that explicitly materialize hierarchy for Neo4j/Bloom exploration.
+
+What changed:
+
+- Added exporter script to build hierarchical GraphML variants from curated outputs:
+  - reads original variant GraphML + community report JSON
+  - preserves entity graph edges as `RELATES_TO`
+  - adds explicit `Community` nodes
+  - adds `IN_COMMUNITY` edges (entity -> community)
+  - adds `HAS_SUBCOMMUNITY` edges (community -> subcommunity)
+  - adds readability helper fields (`description_clean`, split segment JSON fields)
+- Generated hierarchical artifacts for all three agriculture variants under `artifacts/.../neo4j_hierarchical/`
+- Added import/query helper Cypher and folder README for direct Neo4j usage
+
+Why this matters:
+
+- the original graph stores hierarchy hints as serialized text (`clusters`) but not as explicit topology
+- Bloom/Neo4j can now perform level-based drilldown and hierarchy navigation directly through graph relationships
+
+Relevant files:
+
+- [eval/build_hierarchical_graphml_artifacts.py](/home/paulbeglin/projects/RITAL-IR-project/eval/build_hierarchical_graphml_artifacts.py)
+- [artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/hierarchical_manifest.json](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/hierarchical_manifest.json)
+- [artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/neo4j_import_queries.cypher](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/neo4j_import_queries.cypher)
+- [artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/README.md)

@@ -229,3 +229,26 @@ Relevant files:
 - [artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/hierarchical_manifest.json](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/hierarchical_manifest.json)
 - [artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/neo4j_import_queries.cypher](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/neo4j_import_queries.cypher)
 - [artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/neo4j_hierarchical/README.md)
+
+## Research Next-Step Notes
+
+### 2026-05-04
+
+Added planning notes for the next HiRAG research direction based on the paper, active `src/hirag` implementation, previous agriculture runs, and colleague suggestions.
+
+What changed:
+
+- Added a ranked next-step plan centered on retrieval-first experiments before more expensive indexing runs
+- Captured the current implementation gap: bridge paths are seeded by query-relevant entities but path selection itself is unweighted/topological
+- Proposed query-conditioned bridge retrieval, local retrieval reranking, entropy/confidence-based second-pass clustering, and GMM hardening
+- Added a focused retrieval experiment note with concrete variant designs and metrics
+
+Why this matters:
+
+- gives the team a durable trace of the current reasoning before implementing experimental variants
+- keeps the next implementation loop narrow enough to use existing graph artifacts instead of rerunning many-hour indexing jobs
+
+Relevant files:
+
+- [docs/NEXT_STEPS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/NEXT_STEPS.md)
+- [docs/RETRIEVAL_EXPERIMENTS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_EXPERIMENTS.md)

@@ -335,6 +335,11 @@ def parse_args() -> argparse.Namespace:
     default_fastembed_threads = env_int_or_none("FASTEMBED_THREADS")
     default_fastembed_parallel = env_int_or_none("FASTEMBED_PARALLEL")
     default_fastembed_cache_path = env_str("FASTEMBED_CACHE_PATH")
+    default_reranker_model = env_str(
+        "RERANKER_MODEL", "answerdotai/answerai-colbert-small-v1"
+    )
+    default_reranker_cache_path = env_str("RERANKER_CACHE_PATH") or default_fastembed_cache_path
+    default_local_rerank_top_n = env_int("LOCAL_RERANK_TOP_N", 100)
     default_community_report_input_max_tokens = env_int(
         "COMMUNITY_REPORT_INPUT_MAX_TOKENS", 8192
     )
@@ -358,6 +363,10 @@ def parse_args() -> argparse.Namespace:
 
     query_mode_choices = [
         "hi",
+        "hi_weighted",
+        "hi_minmax",
+        "hi_rerank",
+        "hi_rerank_weighted",
         "naive",
         "hi_nobridge",
         "hi_local",
@@ -501,6 +510,24 @@ def parse_args() -> argparse.Namespace:
         help="FastEmbed cache path",
     )
     parser.add_argument(
+        "--reranker-model",
+        type=str,
+        default=default_reranker_model,
+        help="FastEmbed late-interaction reranker model",
+    )
+    parser.add_argument(
+        "--reranker-cache-path",
+        type=str,
+        default=default_reranker_cache_path,
+        help="FastEmbed reranker cache path",
+    )
+    parser.add_argument(
+        "--local-rerank-top-n",
+        type=int,
+        default=default_local_rerank_top_n,
+        help="Number of dense entity candidates reranked by experimental local reranking modes",
+    )
+    parser.add_argument(
         "--disable-llm-cache",
         action="store_true",
         default=default_disable_llm_cache,
@@ -629,6 +656,8 @@ def build_graph_runtime(
         "fastembed_threads": args.fastembed_threads,
         "fastembed_parallel": args.fastembed_parallel,
         "fastembed_cache_path": args.fastembed_cache_path,
+        "reranker_model": args.reranker_model,
+        "reranker_cache_path": args.reranker_cache_path,
         "telemetry": telemetry,
         "benchmark_label": args.benchmark_label,
         "model_max_context": model_max_context,
@@ -657,6 +686,9 @@ def build_graph_runtime(
         entity_extract_max_gleaning=args.entity_extract_max_gleaning,
         community_report_input_max_tokens=args.community_report_input_max_tokens,
         cluster_summary_input_max_tokens=args.cluster_summary_input_max_tokens,
+        reranker_model=args.reranker_model,
+        reranker_cache_path=args.reranker_cache_path,
+        local_rerank_top_n=args.local_rerank_top_n,
     )
     return graph_func, runtime
 

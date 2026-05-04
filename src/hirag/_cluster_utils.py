@@ -70,53 +70,94 @@ def local_cluster_embeddings(
     return reduced_embeddings
 
 
-def fit_gaussian_mixture(n_components, embeddings, random_state):
+def fit_gaussian_mixture(n_components, embeddings, random_state, reg_covar=1e-6):
+    embeddings = np.asarray(embeddings, dtype=np.float64)
     gm = GaussianMixture(
         n_components=n_components,
         random_state=random_state,
         n_init=5,
-        init_params='k-means++'
+        init_params='k-means++',
+        reg_covar=reg_covar,
         )
     gm.fit(embeddings)
     return gm.bic(embeddings)
 
 
-def get_optimal_clusters(embeddings, max_clusters=50, random_state=0, rel_tol=1e-3):
+def get_optimal_clusters(embeddings, max_clusters=50, random_state=0, rel_tol=1e-3, reg_covar=1e-6):
+    embeddings = np.asarray(embeddings, dtype=np.float64)
     max_clusters = min(len(embeddings), max_clusters)
     n_clusters = np.arange(1, max_clusters)
     bics = []
+    successful_clusters = []
+    failed_clusters = []
     prev_bic = float('inf')
     for n in tqdm(n_clusters):
-        bic = fit_gaussian_mixture(n, embeddings, random_state)
+        try:
+            bic = fit_gaussian_mixture(n, embeddings, random_state, reg_covar=reg_covar)
+        except Exception as exc:
+            failed_clusters.append((int(n), str(exc)))
+            continue
         # print(bic)
         bics.append(bic)
+        successful_clusters.append(n)
         # early stop
         if (abs(prev_bic - bic) / abs(prev_bic)) < rel_tol:
             break
         prev_bic = bic
-    optimal_clusters = n_clusters[np.argmin(bics)]
+    if not bics:
+        logging.warning(
+            "All GaussianMixture BIC candidates failed; falling back to one cluster. failures=%s",
+            failed_clusters[:5],
+        )
+        return 1
+    optimal_clusters = int(successful_clusters[np.argmin(bics)])
+    if failed_clusters:
+        logging.warning(
+            "Skipped %s failed GaussianMixture candidates while selecting clusters",
+            len(failed_clusters),
+        )
+    logging.info(f"Selected {optimal_clusters} GMM clusters")
     return optimal_clusters
 
 
-def GMM_cluster(embeddings: np.ndarray, threshold: float, random_state: int = 0):
-    n_clusters = get_optimal_clusters(embeddings)
-    gm = GaussianMixture(
-        n_components=n_clusters, 
-        random_state=random_state, 
-        n_init=5,
-        init_params='k-means++')
-    gm.fit(embeddings)
+def GMM_cluster(embeddings: np.ndarray, threshold: float, random_state: int = 0, reg_covar: float = 1e-6):
+    embeddings = np.asarray(embeddings, dtype=np.float64)
+    n_clusters = get_optimal_clusters(embeddings, reg_covar=reg_covar)
+    while n_clusters >= 1:
+        try:
+            gm = GaussianMixture(
+                n_components=n_clusters,
+                random_state=random_state,
+                n_init=5,
+                init_params='k-means++',
+                reg_covar=reg_covar,
+            )
+            gm.fit(embeddings)
+            break
+        except Exception as exc:
+            logging.warning(
+                "GaussianMixture fit failed with %s components; retrying with fewer: %s",
+                n_clusters,
+                exc,
+            )
+            n_clusters -= 1
+    if n_clusters < 1:
+        logging.warning("GaussianMixture fit failed for all component counts; using one cluster")
+        labels = [np.array([0]) for _ in embeddings]
+        return labels, 1
     probs = gm.predict_proba(embeddings)        # [num, cluster_num]
     labels = [np.where(prob > threshold)[0] for prob in probs]
+    labels = [label if len(label) else np.array([int(np.argmax(prob))]) for label, prob in zip(labels, probs)]
     return labels, n_clusters
 
 
 def perform_clustering(
-    embeddings: np.ndarray, dim: int, threshold: float, verbose: bool = False
+    embeddings: np.ndarray, dim: int, threshold: float, verbose: bool = False, reg_covar: float = 1e-6
 ) -> List[np.ndarray]:
+    embeddings = np.asarray(embeddings, dtype=np.float64)
     reduced_embeddings_global = global_cluster_embeddings(embeddings, min(dim, len(embeddings) -2))
     global_clusters, n_global_clusters = GMM_cluster(     # (num, 2)
-        reduced_embeddings_global, threshold
+        reduced_embeddings_global, threshold, reg_covar=reg_covar
     )
 
     if verbose:
@@ -229,7 +270,10 @@ class Hierarchical_Clustering(ClusteringAlgorithm):
             logging.info(f"############ Layer[{layer}] Clustering ############")
             # Perform the clustering
             clusters = perform_clustering(
-                embeddings, dim=reduction_dimension, threshold=cluster_threshold
+                embeddings,
+                dim=reduction_dimension,
+                threshold=cluster_threshold,
+                reg_covar=global_config.get("gmm_reg_covar", 1e-6),
             )
             # Initialize an empty list to store the clusters of nodes
             node_clusters = []

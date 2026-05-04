@@ -6,12 +6,30 @@ import numpy as np
 
 @dataclass
 class QueryParam:
-    mode: Literal["hi_global", "hi_local", "hi_bridge", "hi_nobridge", "naive", "hi"] = "hi"
+    mode: Literal[
+        "hi_global",
+        "hi_local",
+        "hi_bridge",
+        "hi_nobridge",
+        "naive",
+        "hi",
+        "hi_weighted",
+        "hi_minmax",
+        "hi_rerank",
+        "hi_rerank_weighted",
+    ] = "hi"
     only_need_context: bool = False
     response_type: str = "Multiple Paragraphs"
     level: int = 2
     top_k: int = 20         # retrieve top-k entities
     top_m: int = 10         # retrieve top-m entities in each retrieved community
+    bridge_strategy: Literal["unweighted", "query_weighted", "minmax"] = "unweighted"
+    local_rerank_strategy: Literal["none", "fastembed_late_interaction"] = "none"
+    local_candidate_multiplier: int = 10
+    local_rerank_top_n: int = 100
+    bridge_alpha: float = 1.0
+    bridge_beta: float = 0.15
+    bridge_gamma: float = 0.05
     # naive search
     naive_max_token_for_text_unit = 10000
     # hi search
@@ -20,6 +38,7 @@ class QueryParam:
     max_token_for_bridge_knowledge: int = 12500
     max_token_for_community_report: int = 12500
     community_single_one: bool = False
+    debug_info: dict = field(default_factory=dict)
 
 
 TextChunkSchema = TypedDict(

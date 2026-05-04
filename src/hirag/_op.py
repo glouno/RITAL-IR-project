@@ -6,7 +6,7 @@ import networkx as nx
 import time
 import logging
 from contextlib import contextmanager
-from typing import Union
+from typing import Any, Callable, Union
 from collections import Counter, defaultdict
 from ._splitter import SeparatorSplitter
 from ._utils import (
@@ -58,6 +58,168 @@ def _get_stage_max_tokens(
     if stage in stage_max_tokens:
         return stage_max_tokens[stage]
     return fallback
+
+
+def _ordered_unique(items: list[str]) -> list[str]:
+    return list(dict.fromkeys(item for item in items if item))
+
+
+def _safe_float(value: Any, default: float = 1.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _cosine_similarity(left: Any, right: Any) -> float:
+    import numpy as np
+
+    left_arr = np.asarray(left, dtype=np.float64)
+    right_arr = np.asarray(right, dtype=np.float64)
+    left_norm = np.linalg.norm(left_arr)
+    right_norm = np.linalg.norm(right_arr)
+    if left_norm == 0 or right_norm == 0:
+        return 0.0
+    return float(np.dot(left_arr, right_arr) / (left_norm * right_norm))
+
+
+def _normalize_token_embeddings(embeddings: Any):
+    import numpy as np
+
+    arr = np.asarray(embeddings, dtype=np.float32)
+    if arr.ndim == 1:
+        arr = arr.reshape(1, -1)
+    norms = np.linalg.norm(arr, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    return arr / norms
+
+
+def _late_interaction_score(query_embedding: Any, document_embedding: Any) -> float:
+    query_tokens = _normalize_token_embeddings(query_embedding)
+    document_tokens = _normalize_token_embeddings(document_embedding)
+    if query_tokens.size == 0 or document_tokens.size == 0:
+        return 0.0
+    scores = query_tokens @ document_tokens.T
+    return float(scores.max(axis=1).sum())
+
+
+_RERANKER_CACHE: dict[tuple[str, str | None], Any] = {}
+_RERANKER_FAILURES: set[tuple[str, str | None]] = set()
+_EDGE_EMBEDDING_CACHE: dict[tuple[int, int, int], dict[str, Any]] = {}
+
+
+def _reranker_cache_key(global_config: dict) -> tuple[str, str | None]:
+    model_name = global_config.get(
+        "reranker_model", "answerdotai/answerai-colbert-small-v1"
+    )
+    cache_path = global_config.get("reranker_cache_path")
+    return model_name, cache_path
+
+
+def _get_late_interaction_reranker(global_config: dict):
+    model_name, cache_path = _reranker_cache_key(global_config)
+    key = (model_name, cache_path)
+    if key in _RERANKER_FAILURES:
+        raise RuntimeError(
+            f"late-interaction reranker previously failed for {model_name}"
+        )
+    if key not in _RERANKER_CACHE:
+        from fastembed import LateInteractionTextEmbedding
+
+        _RERANKER_CACHE[key] = LateInteractionTextEmbedding(
+            model_name=model_name,
+            cache_dir=cache_path,
+            lazy_load=True,
+        )
+    return _RERANKER_CACHE[key]
+
+
+def _entity_text(node_data: dict) -> str:
+    return "\n".join(
+        [
+            str(node_data.get("entity_name", "")),
+            f"type: {node_data.get('entity_type', 'UNKNOWN')}",
+            f"description: {node_data.get('description', '')}",
+        ]
+    )
+
+
+async def _fetch_entity_node_datas(
+    query: str,
+    knowledge_graph_inst: BaseGraphStorage,
+    entities_vdb: BaseVectorStorage,
+    query_param: QueryParam,
+    *,
+    global_config: dict | None = None,
+    candidate_multiplier: int | None = None,
+) -> list[dict]:
+    multiplier = candidate_multiplier or query_param.local_candidate_multiplier
+    candidate_count = max(query_param.top_k, query_param.top_k * max(1, multiplier))
+    results = await entities_vdb.query(query, top_k=candidate_count)
+    if not len(results):
+        return []
+
+    node_datas_raw = await asyncio.gather(
+        *[knowledge_graph_inst.get_node(r["entity_name"]) for r in results]
+    )
+    if not all([n is not None for n in node_datas_raw]):
+        logger.warning("Some nodes are missing, maybe the storage is damaged")
+    node_degrees = await asyncio.gather(
+        *[knowledge_graph_inst.node_degree(r["entity_name"]) for r in results]
+    )
+    node_datas = [
+        {
+            **n,
+            "entity_name": r["entity_name"],
+            "rank": d,
+            "dense_order": index,
+            "dense_score": r.get("distance", r.get("__metrics__", 0.0)),
+        }
+        for index, (r, n, d) in enumerate(zip(results, node_datas_raw, node_degrees))
+        if n is not None
+    ]
+    if (
+        global_config is not None
+        and query_param.local_rerank_strategy == "fastembed_late_interaction"
+    ):
+        node_datas = _rerank_entity_node_datas(query, node_datas, query_param, global_config)
+    return node_datas
+
+
+def _rerank_entity_node_datas(
+    query: str,
+    node_datas: list[dict],
+    query_param: QueryParam,
+    global_config: dict,
+) -> list[dict]:
+    if not node_datas:
+        return node_datas
+    rerank_limit = max(query_param.top_k, query_param.local_rerank_top_n)
+    rerank_items = node_datas[:rerank_limit]
+    untouched = node_datas[rerank_limit:]
+    try:
+        reranker = _get_late_interaction_reranker(global_config)
+        texts = [query] + [_entity_text(node) for node in rerank_items]
+        embeddings = list(reranker.embed(texts))
+        query_embedding = embeddings[0]
+        doc_embeddings = embeddings[1:]
+        rescored = []
+        for node, doc_embedding in zip(rerank_items, doc_embeddings):
+            rescored.append(
+                {
+                    **node,
+                    "rerank_score": _late_interaction_score(query_embedding, doc_embedding),
+                }
+            )
+        rescored.sort(
+            key=lambda item: (item.get("rerank_score", 0.0), item.get("dense_score", 0.0)),
+            reverse=True,
+        )
+        return rescored + untouched
+    except Exception as exc:
+        _RERANKER_FAILURES.add(_reranker_cache_key(global_config))
+        logger.warning("Late-interaction reranking failed; using dense order: %s", exc)
+        return node_datas
 
 
 def chunking_by_token_size(
@@ -1232,7 +1394,6 @@ async def _find_most_related_edges_from_paths(
     #                     )
     all_reasoning_path = await knowledge_graph_inst.subgraph_edges(path)
     all_edges = set()
-    print(all_reasoning_path)
     all_edges.update([tuple(sorted(e[:2])) for e in all_reasoning_path])
     all_edges = list(all_edges)
     all_edges_pack = await asyncio.gather(
@@ -1255,6 +1416,295 @@ async def _find_most_related_edges_from_paths(
         max_token_size=query_param.max_token_for_bridge_knowledge,
     )
     return all_edges_data
+
+
+def _networkx_graph_from_storage(knowledge_graph_inst: BaseGraphStorage) -> nx.Graph | None:
+    return getattr(knowledge_graph_inst, "_graph", None)
+
+
+def _edge_key(left: str, right: str) -> tuple[str, str]:
+    return tuple(sorted((left, right)))
+
+
+def _edge_description_text(graph: nx.Graph, source: str, target: str, edge_data: dict) -> str:
+    source_data = graph.nodes.get(source, {})
+    target_data = graph.nodes.get(target, {})
+    return "\n".join(
+        [
+            f"source: {source}",
+            str(source_data.get("description", "")),
+            f"relation: {edge_data.get('description', '')}",
+            f"target: {target}",
+            str(target_data.get("description", "")),
+        ]
+    )
+
+
+async def _build_query_edge_costs(
+    query: str,
+    knowledge_graph_inst: BaseGraphStorage,
+    query_param: QueryParam,
+    embedding_func: Callable | None,
+) -> dict[tuple[str, str], dict[str, float]]:
+    graph = _networkx_graph_from_storage(knowledge_graph_inst)
+    if graph is None or embedding_func is None:
+        return {}
+    edges = list(graph.edges(data=True))
+    if not edges:
+        return {}
+    try:
+        query_embedding = (await embedding_func([query]))[0]
+    except Exception as exc:
+        logger.warning("Query-weighted bridge query embedding failed: %s", exc)
+        return {}
+
+    cache_key = (id(graph), graph.number_of_nodes(), graph.number_of_edges())
+    if cache_key not in _EDGE_EMBEDDING_CACHE:
+        edge_texts = [
+            _edge_description_text(graph, source, target, data)
+            for source, target, data in edges
+        ]
+        try:
+            edge_embeddings = await embedding_func(edge_texts)
+        except Exception as exc:
+            logger.warning("Query-weighted bridge edge embedding failed: %s", exc)
+            return {}
+        _EDGE_EMBEDDING_CACHE[cache_key] = {
+            "edges": edges,
+            "edge_embeddings": edge_embeddings,
+            "max_hub": max(
+                (graph.degree(source) + graph.degree(target) for source, target, _ in edges),
+                default=1,
+            ),
+        }
+    cached = _EDGE_EMBEDDING_CACHE[cache_key]
+    edges = cached["edges"]
+    edge_embeddings = cached["edge_embeddings"]
+    max_hub = max(
+        int(cached["max_hub"]),
+        1,
+    )
+    costs: dict[tuple[str, str], dict[str, float]] = {}
+    for (source, target, data), edge_embedding in zip(edges, edge_embeddings):
+        semantic_score = _cosine_similarity(query_embedding, edge_embedding)
+        semantic_cost = max(0.0, 1.0 - semantic_score)
+        hub_penalty = (graph.degree(source) + graph.degree(target)) / max_hub
+        weight = max(_safe_float(data.get("weight"), 1.0), 0.0)
+        inverse_weight_penalty = 1.0 / (1.0 + weight)
+        cost = (
+            query_param.bridge_alpha * semantic_cost
+            + query_param.bridge_beta * hub_penalty
+            + query_param.bridge_gamma * inverse_weight_penalty
+        )
+        costs[_edge_key(source, target)] = {
+            "cost": float(cost),
+            "semantic_score": float(semantic_score),
+            "semantic_cost": float(semantic_cost),
+            "hub_penalty": float(hub_penalty),
+            "inverse_weight_penalty": float(inverse_weight_penalty),
+        }
+    return costs
+
+
+def _weighted_edge_cost(
+    costs: dict[tuple[str, str], dict[str, float]],
+    source: str,
+    target: str,
+) -> float:
+    return costs.get(_edge_key(source, target), {}).get("cost", 1.0)
+
+
+def _weighted_dijkstra_path(
+    graph: nx.Graph,
+    source: str,
+    target: str,
+    edge_costs: dict[tuple[str, str], dict[str, float]],
+) -> list[str]:
+    return nx.dijkstra_path(
+        graph,
+        source=source,
+        target=target,
+        weight=lambda u, v, _data: _weighted_edge_cost(edge_costs, u, v),
+    )
+
+
+def _minmax_path(
+    graph: nx.Graph,
+    source: str,
+    target: str,
+    edge_costs: dict[tuple[str, str], dict[str, float]],
+) -> list[str]:
+    thresholds = sorted({data["cost"] for data in edge_costs.values()})
+    if not thresholds:
+        return nx.shortest_path(graph, source=source, target=target)
+    best_path: list[str] | None = None
+    low = 0
+    high = len(thresholds) - 1
+    while low <= high:
+        mid = (low + high) // 2
+        threshold = thresholds[mid]
+        allowed_edges = [
+            (u, v)
+            for u, v in graph.edges()
+            if _weighted_edge_cost(edge_costs, u, v) <= threshold
+        ]
+        filtered = nx.Graph()
+        filtered.add_nodes_from(graph.nodes())
+        filtered.add_edges_from(allowed_edges)
+        try:
+            candidate = nx.shortest_path(filtered, source=source, target=target)
+            best_path = candidate
+            high = mid - 1
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            low = mid + 1
+    if best_path is None:
+        return _weighted_dijkstra_path(graph, source, target, edge_costs)
+    return best_path
+
+
+async def _path_between(
+    knowledge_graph_inst: BaseGraphStorage,
+    source: str,
+    target: str,
+    query_param: QueryParam,
+    edge_costs: dict[tuple[str, str], dict[str, float]],
+) -> list[str]:
+    from ._storage.gdb_neo4j import Neo4jStorage
+
+    graph = _networkx_graph_from_storage(knowledge_graph_inst)
+    try:
+        if (
+            graph is not None
+            and query_param.bridge_strategy == "query_weighted"
+            and edge_costs
+        ):
+            return _weighted_dijkstra_path(graph, source, target, edge_costs)
+        if (
+            graph is not None
+            and query_param.bridge_strategy == "minmax"
+            and edge_costs
+        ):
+            return _minmax_path(graph, source, target, edge_costs)
+        if isinstance(knowledge_graph_inst, Neo4jStorage):
+            return await knowledge_graph_inst.shortest_path(source, target)
+        if graph is not None:
+            return nx.shortest_path(graph, source=source, target=target)
+    except (nx.NetworkXNoPath, nx.NodeNotFound):
+        return []
+    except Exception as exc:
+        logger.warning(
+            "Bridge path strategy %s failed between %s and %s; falling back to unweighted path: %s",
+            query_param.bridge_strategy,
+            source,
+            target,
+            exc,
+        )
+        if graph is not None:
+            try:
+                return nx.shortest_path(graph, source=source, target=target)
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                return []
+    return []
+
+
+async def _find_path_with_required_nodes(
+    knowledge_graph_inst: BaseGraphStorage,
+    key_entities: list[str],
+    query_param: QueryParam,
+    edge_costs: dict[tuple[str, str], dict[str, float]],
+) -> list[str]:
+    key_entities = _ordered_unique(key_entities)
+    if len(key_entities) < 2:
+        return key_entities
+    final_path: list[str] = []
+    for source, target in zip(key_entities, key_entities[1:]):
+        sub_path = await _path_between(
+            knowledge_graph_inst, source, target, query_param, edge_costs
+        )
+        if not sub_path:
+            if not final_path or final_path[-1] != target:
+                final_path.append(target)
+            continue
+        if final_path:
+            final_path.extend(sub_path[1:])
+        else:
+            final_path.extend(sub_path)
+    return final_path
+
+
+def _select_key_entities(
+    overall_node_datas: list[dict],
+    use_communities: list[CommunitySchema],
+    query_param: QueryParam,
+) -> list[str]:
+    key_entities: list[str] = []
+    max_entity_num = query_param.top_m
+    if use_communities:
+        for community in use_communities:
+            community_entities = set(community["nodes"])
+            key_entities.extend(
+                [
+                    entity["entity_name"]
+                    for entity in overall_node_datas
+                    if entity["entity_name"] in community_entities
+                ][:max_entity_num]
+            )
+    else:
+        key_entities.extend(
+            [entity["entity_name"] for entity in overall_node_datas[:max_entity_num]]
+        )
+    return _ordered_unique(key_entities)
+
+
+async def _build_bridge_path_data(
+    query: str,
+    knowledge_graph_inst: BaseGraphStorage,
+    key_entities: list[str],
+    query_param: QueryParam,
+    global_config: dict,
+) -> tuple[list[str], list[dict], dict[tuple[str, str], dict[str, float]]]:
+    embedding_func = global_config.get("embedding_func")
+    edge_costs: dict[tuple[str, str], dict[str, float]] = {}
+    if query_param.bridge_strategy in {"query_weighted", "minmax"}:
+        edge_costs = await _build_query_edge_costs(
+            query, knowledge_graph_inst, query_param, embedding_func
+        )
+        if not edge_costs:
+            query_param.debug_info["bridge_fallback"] = "unweighted"
+    path = await _find_path_with_required_nodes(
+        knowledge_graph_inst, key_entities, query_param, edge_costs
+    )
+    if not path:
+        return [], [], edge_costs
+    path_datas_raw = await asyncio.gather(
+        *[knowledge_graph_inst.get_node(node_id) for node_id in path]
+    )
+    path_degrees = await asyncio.gather(
+        *[knowledge_graph_inst.node_degree(node_id) for node_id in path]
+    )
+    path_datas = [
+        {**node, "entity_name": node_id, "rank": degree}
+        for node_id, node, degree in zip(path, path_datas_raw, path_degrees)
+        if node is not None
+    ]
+    return path, path_datas, edge_costs
+
+
+def _edge_metrics_for_path(
+    path: list[str],
+    edge_costs: dict[tuple[str, str], dict[str, float]],
+) -> dict[str, Any]:
+    path_edge_keys = [_edge_key(left, right) for left, right in zip(path, path[1:])]
+    scored = [edge_costs[key] for key in path_edge_keys if key in edge_costs]
+    costs = [item["cost"] for item in scored]
+    scores = [item["semantic_score"] for item in scored]
+    return {
+        "bridge_path_nodes": len(path),
+        "bridge_path_edges": max(0, len(path) - 1),
+        "mean_edge_cost": sum(costs) / len(costs) if costs else None,
+        "max_edge_cost": max(costs) if costs else None,
+        "mean_edge_score": sum(scores) / len(scores) if scores else None,
+    }
 
 
 # context functions
@@ -1811,6 +2261,7 @@ async def _build_hilocal_query_context(
     query,
     knowledge_graph_inst: BaseGraphStorage,
     entities_vdb: BaseVectorStorage,
+    community_reports: BaseKVStorage[CommunitySchema],
     text_chunks_db: BaseKVStorage[TextChunkSchema],
     query_param: QueryParam,
 ):
@@ -1891,6 +2342,159 @@ async def _build_hilocal_query_context(
 """
 
 
+async def _build_hierarchical_query_context_common(
+    query,
+    knowledge_graph_inst: BaseGraphStorage,
+    entities_vdb: BaseVectorStorage,
+    community_reports: BaseKVStorage[CommunitySchema],
+    text_chunks_db: BaseKVStorage[TextChunkSchema],
+    query_param: QueryParam,
+    global_config: dict,
+    *,
+    bridge_only: bool = False,
+):
+    overall_node_datas = await _fetch_entity_node_datas(
+        query,
+        knowledge_graph_inst,
+        entities_vdb,
+        query_param,
+        global_config=global_config,
+    )
+    if not overall_node_datas:
+        return None
+    node_datas = overall_node_datas[:query_param.top_k]
+
+    use_communities = await _find_most_related_community_from_entities(
+        node_datas, query_param, community_reports
+    )
+    use_text_units = await _find_most_related_text_unit_from_entities(
+        node_datas, query_param, text_chunks_db, knowledge_graph_inst
+    )
+    key_entities = _select_key_entities(overall_node_datas, use_communities, query_param)
+    path, path_datas, edge_costs = await _build_bridge_path_data(
+        query, knowledge_graph_inst, key_entities, query_param, global_config
+    )
+    use_reasoning_path = (
+        await _find_most_related_edges_from_paths(
+            path_datas, path, query_param, knowledge_graph_inst
+        )
+        if path
+        else []
+    )
+
+    query_param.debug_info.update(
+        {
+            "mode": query_param.mode,
+            "bridge_strategy": query_param.bridge_strategy,
+            "local_rerank_strategy": query_param.local_rerank_strategy,
+            "local_entities": [n["entity_name"] for n in node_datas],
+            "communities": [(c["level"], c["title"]) for c in use_communities],
+            "bridge_edges": [
+                {
+                    "source": e["src_tgt"][0],
+                    "target": e["src_tgt"][1],
+                    "description": e.get("description", ""),
+                    "weight": e.get("weight"),
+                    "rank": e.get("rank"),
+                    **edge_costs.get(_edge_key(e["src_tgt"][0], e["src_tgt"][1]), {}),
+                }
+                for e in use_reasoning_path
+            ],
+            **_edge_metrics_for_path(path, edge_costs),
+        }
+    )
+
+    logger.info(
+        f"Using {len(node_datas)} entites, {len(use_communities)} communities, {len(use_reasoning_path)} reasoning path items, {len(use_text_units)} text units"
+    )
+    entities_section_list = [["id", "entity", "type", "description", "rank"]]
+    for i, n in enumerate(node_datas):
+        entities_section_list.append(
+            [
+                i,
+                n["entity_name"],
+                n.get("entity_type", "UNKNOWN"),
+                n.get("description", "UNKNOWN"),
+                n["rank"],
+            ]
+        )
+    entities_context = list_of_list_to_csv(entities_section_list)
+
+    reasoning_path_section_list = [
+        ["id", "source", "target", "description", "weight", "rank"]
+    ]
+    for i, e in enumerate(use_reasoning_path):
+        reasoning_path_section_list.append(
+            [
+                i,
+                e["src_tgt"][0],
+                e["src_tgt"][1],
+                e["description"],
+                e["weight"],
+                e["rank"],
+            ]
+        )
+    reasoning_path_context = list_of_list_to_csv(reasoning_path_section_list)
+
+    communities_section_list = [["id", "content"]]
+    for i, c in enumerate(use_communities):
+        communities_section_list.append([i, c["report_string"].replace("\n", " ")])
+    communities_context = list_of_list_to_csv(communities_section_list)
+
+    text_units_section_list = [["id", "content"]]
+    for i, t in enumerate(use_text_units):
+        text_units_section_list.append([i, t["content"]])
+    text_units_context = list_of_list_to_csv(text_units_section_list)
+
+    query_param.debug_info.update(
+        {
+            "local_context_text": entities_context,
+            "global_context_text": communities_context,
+            "bridge_context_text": reasoning_path_context,
+        }
+    )
+
+    if bridge_only:
+        return f"""
+-----Reasoning Path-----
+```csv
+{reasoning_path_context}
+```
+-----Source Documents-----
+```csv
+{text_units_context}
+```
+"""
+
+    entities = [n["entity_name"] for n in node_datas]
+    communities = [(c["level"], c["title"]) for c in use_communities]
+    chunks = [(t["full_doc_id"], t["chunk_order_index"]) for t in use_text_units]
+    references_context = (
+        f"Entities ({len(entities)}): {entities}\n\n"
+        f"Communities (level, cluster_id) ({len(communities)}): {communities}\n\n"
+        f"Chunks (doc_id, chunk_index) ({len(chunks)}): {chunks}\n"
+    )
+    logging.info(f"====== References ======:\n{references_context}")
+    return f"""
+-----Backgrounds-----
+```csv
+{communities_context}
+```
+-----Reasoning Path-----
+```csv
+{reasoning_path_context}
+```
+-----Detail Entity Information-----
+```csv
+{entities_context}
+```
+-----Source Documents-----
+```csv
+{text_units_context}
+```
+"""
+
+
 # query functions
 async def hierarchical_query(
     query,
@@ -1904,13 +2508,14 @@ async def hierarchical_query(
     prompts = _get_prompts(global_config)
     use_model_func = global_config["best_model_func"]
     with timer():
-        context = await _build_hierarchical_query_context(
+        context = await _build_hierarchical_query_context_common(
             query,
             knowledge_graph_inst,
             entities_vdb,
             community_reports,
             text_chunks_db,
             query_param,
+            global_config,
         )
     if query_param.only_need_context:
         return context
@@ -1940,13 +2545,15 @@ async def hierarchical_bridge_query(
     prompts = _get_prompts(global_config)
     use_model_func = global_config["best_model_func"]
     with timer():
-        context = await _build_hibridge_query_context(
+        context = await _build_hierarchical_query_context_common(
             query,
             knowledge_graph_inst,
             entities_vdb,
             community_reports,
             text_chunks_db,
             query_param,
+            global_config,
+            bridge_only=True,
         )
     if query_param.only_need_context:
         return context

@@ -213,6 +213,46 @@ Reason:
 6. Prototype entropy/confidence second-pass clustering on the worst large communities.
 7. Only then consider a new full indexing run.
 
+## dev/retrieval Implementation Status
+
+Implemented on 2026-05-04:
+
+- Added experimental query modes:
+  - `hi_weighted`
+  - `hi_minmax`
+  - `hi_rerank`
+  - `hi_rerank_weighted`
+- Added query-parameter presets for bridge strategy, local reranking, candidate breadth, rerank depth, and bridge-cost weights.
+- Refactored hierarchical context construction so full HiRAG and bridge-only retrieval share bridge path helpers.
+- Added ordered key-entity deduplication and safer empty-path handling.
+- Added query-weighted bridge search with NetworkX Dijkstra.
+- Added minmax bridge search that minimizes the worst edge cost, then falls back to weighted/unweighted paths if needed.
+- Added FastEmbed late-interaction local reranking with dense retrieval as candidate generation and clean fallback.
+- Added deterministic context benchmark script:
+  - `eval/retrieval_context_benchmark.py`
+- Added bridge coverage diagnostics:
+  - bridge vs local token recall
+  - bridge vs global token recall
+  - bridge vs query token overlap
+- Hardened GMM clustering for duplicate/collapsed embeddings and covariance failures.
+- Added cluster-balance analyzer:
+  - `eval/analyze_cluster_balance.py`
+
+Smoke artifacts:
+
+- `.runs/retrieval_eval/dev_retrieval_smoke/`
+- `.runs/cluster_balance/dev_retrieval_smoke/`
+
+Important runtime notes from the smoke:
+
+- The first `hi_weighted` query embeds all graph edge texts and took about 135 seconds on the agriculture graph.
+- After the edge embedding cache is warm, weighted/reranked-weighted retrieval is much faster.
+- FastEmbed late-interaction reranking now works with the repo-local `.runs/fastembed_cache` cache path.
+- Cluster split planning is intentionally conservative by default:
+  - one oversized/high-entropy community
+  - first 100 member entities
+  - wider runs should pass `--max-split-communities` and `--max-split-members` explicitly.
+
 ## Success Criteria
 
 For retrieval experiments:
@@ -234,4 +274,3 @@ For clustering experiments:
 The strongest project story is:
 
 HiRAG introduces a hierarchical graph and three-level retrieval, but its bridge path is still mostly topology-driven. We improve HiRetrieval by making the bridge query-conditioned and by strengthening the local entity retrieval that seeds both global and bridge context. As a second direction, we make the hierarchy more robust by detecting oversized or low-confidence clusters and rebalancing only those regions.
-

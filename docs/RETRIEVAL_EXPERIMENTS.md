@@ -16,6 +16,11 @@ Behavior to compare against:
 - key entities: top retrieved entities that are members of each selected community
 - bridge: one unweighted shortest-path chain through deduplicated key entities
 
+Implemented control note:
+
+- `hi` remains the baseline full-context mode.
+- The only intentional control-path cleanup is deterministic ordered deduplication for key entities.
+
 ## Experiment A: Query-Weighted Bridge
 
 Goal:
@@ -45,8 +50,8 @@ Initial weights:
 
 ```text
 alpha = 1.0
-beta = 0.05
-gamma = 0.1
+beta = 0.15
+gamma = 0.05
 ```
 
 Implementation note:
@@ -145,6 +150,14 @@ Reranking options:
 - cross-encoder reranker
 - FastEmbed reranker if dependency friction is lower
 
+Implemented v1:
+
+- `fastembed.LateInteractionTextEmbedding`
+- default model: `answerdotai/answerai-colbert-small-v1`
+- dense entity search remains candidate generation
+- reranked entities feed the same local/global/bridge context builder
+- if model initialization or embedding fails, retrieval logs a warning and preserves dense ordering
+
 Entity text:
 
 ```text
@@ -186,3 +199,69 @@ Recommended first outputs:
 - one markdown qualitative report with 3-5 representative cases
 - one CSV summary for path/context metrics
 
+## Implemented Modes
+
+The active experimental modes are:
+
+- `hi`: baseline HiRAG.
+- `hi_weighted`: baseline local retrieval plus query-weighted bridge paths.
+- `hi_minmax`: baseline local retrieval plus minmax bridge paths.
+- `hi_rerank`: FastEmbed late-interaction local reranking plus baseline bridge.
+- `hi_rerank_weighted`: reranked local retrieval plus query-weighted bridge paths.
+
+## Smoke Results
+
+Command:
+
+```bash
+uv run python eval/retrieval_context_benchmark.py \
+  --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 \
+  --query-file eval/datasets/agriculture/agriculture_query.jsonl \
+  --query-limit 10 \
+  --output-dir .runs/retrieval_eval/dev_retrieval_smoke
+```
+
+Outputs:
+
+- `contexts.jsonl`
+- `metrics.csv`
+- `summary.json`
+- `summary.md`
+
+Aggregate observations from the first smoke:
+
+- `hi`: mean latency 0.12s, bridge/query token overlap 0.63.
+- `hi_weighted`: mean latency 13.78s because the first query builds the edge embedding cache; bridge/query overlap rose to 0.67.
+- `hi_minmax`: mean latency 8.24s, longer paths, bridge/query overlap rose to 0.72, max edge cost was lower than weighted Dijkstra.
+- `hi_rerank`: mean latency 0.76s and changed local entities enough to reduce bridge edge count.
+- `hi_rerank_weighted`: mean latency 1.01s after caches were warm, with similar bridge/query overlap to rerank-only.
+
+Interpretation:
+
+- `hi_minmax` is the most promising bridge-only direction by deterministic context metrics, but it expands path/context size.
+- `hi_rerank` changes the seed entities substantially and should be checked manually on representative queries.
+- The first weighted query is still expensive; a future optimization should compute edge costs only on a candidate subgraph or persist edge embeddings.
+
+## Cluster-Balance Smoke
+
+Command:
+
+```bash
+uv run python eval/analyze_cluster_balance.py \
+  --graphml artifacts/agriculture_graphs_2026-04-23/graphs/agriculture_ultra_lean.graphml \
+  --community-reports artifacts/agriculture_graphs_2026-04-23/metrics/agriculture_ultra_lean_community_reports.json \
+  --output-dir .runs/cluster_balance/dev_retrieval_smoke
+```
+
+Outputs:
+
+- `community_balance.csv`
+- `oversized_communities.json`
+- `split_plan.json`
+
+Smoke observation:
+
+- 1,742 communities exceeded the default size/entropy thresholds.
+- The largest selected candidate had 842 nodes.
+- The default split plan embeds one candidate and caps embedded members at 100 for smoke-test runtime.
+- The first candidate proposed one local GMM cluster, which suggests type entropy alone is not enough to decide that a community is semantically splittable.

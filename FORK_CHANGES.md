@@ -252,3 +252,43 @@ Relevant files:
 
 - [docs/NEXT_STEPS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/NEXT_STEPS.md)
 - [docs/RETRIEVAL_EXPERIMENTS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_EXPERIMENTS.md)
+
+## Retrieval Branch Experiments
+
+### 2026-05-04
+
+Implemented runnable retrieval experiments on the active `main.py` + `src/hirag/` path without requiring a new indexing run.
+
+What changed:
+
+- Added experimental query modes:
+  - `hi_weighted`
+  - `hi_minmax`
+  - `hi_rerank`
+  - `hi_rerank_weighted`
+- Added query preset fields for bridge strategy, local reranking strategy, rerank candidate counts, and bridge-cost weights.
+- Refactored hierarchical bridge/context construction into shared helpers while preserving baseline `hi` behavior aside from deterministic key-entity ordering.
+- Added NetworkX query-weighted Dijkstra bridge paths.
+- Added minmax bridge paths that avoid one very bad high-cost edge when possible.
+- Added FastEmbed late-interaction local entity reranking with dense-retrieval fallback.
+- Added deterministic retrieval-context benchmark outputs for contexts, metrics, summaries, and bridge coverage diagnostics.
+- Hardened GMM clustering against duplicate/collapsed embeddings and covariance failures.
+- Added cluster-balance diagnostics and bounded second-pass split-plan prototyping for oversized/high-entropy communities.
+
+Validation:
+
+- `uv run pytest tests/test_main_runtime.py tests/test_retrieval.py tests/test_hierarchy.py tests/test_hirag_retrieval_experiments.py tests/test_cluster_balance.py`
+- `uv run python eval/retrieval_context_benchmark.py --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 --query-file eval/datasets/agriculture/agriculture_query.jsonl --query-limit 10 --output-dir .runs/retrieval_eval/dev_retrieval_smoke`
+- `uv run python eval/analyze_cluster_balance.py --graphml artifacts/agriculture_graphs_2026-04-23/graphs/agriculture_ultra_lean.graphml --community-reports artifacts/agriculture_graphs_2026-04-23/metrics/agriculture_ultra_lean_community_reports.json --output-dir .runs/cluster_balance/dev_retrieval_smoke`
+
+Relevant files:
+
+- [main.py](/home/paulbeglin/projects/RITAL-IR-project/main.py)
+- [src/hirag/base.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/base.py)
+- [src/hirag/hirag.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/hirag.py)
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [src/hirag/_cluster_utils.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_cluster_utils.py)
+- [eval/retrieval_context_benchmark.py](/home/paulbeglin/projects/RITAL-IR-project/eval/retrieval_context_benchmark.py)
+- [eval/analyze_cluster_balance.py](/home/paulbeglin/projects/RITAL-IR-project/eval/analyze_cluster_balance.py)
+- [docs/NEXT_STEPS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/NEXT_STEPS.md)
+- [docs/RETRIEVAL_EXPERIMENTS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_EXPERIMENTS.md)

@@ -538,6 +538,46 @@ flowchart TD
     BlindReview --> Report
 ```
 
+## Context Bloat Diagnosis
+
+The first q30 local answer run stalled after 21 rows because several prompts exceeded the local vLLM model's 12,288-token context window. The issue was mostly retrieval/context packaging, not the user questions.
+
+Observed bloat sources:
+
+- q50 context metrics were around 30k tokens per request before answer-generation compaction.
+- bridge paths, especially minmax variants, can add many relationship rows.
+- community reports are verbose.
+- source chunks are large; under small text budgets they were sometimes dropped entirely, which saves tokens but hurts evidence coverage.
+
+Implemented mitigation:
+
+- answer-eval context is now built separately before generation
+- the prompt token count is estimated before calling the model
+- budgets can shrink adaptively
+- source chunks are retained as bounded snippets using `text_unit_snippet_chars`
+- answer generation has explicit `answer_max_tokens` and request timeout
+- `eval/retrieval_budget_sweep.py` sweeps compact regimes
+
+Current best starting point:
+
+```text
+top_k=12
+top_m=6
+local/global/bridge section budgets=1000 tokens
+text-unit retrieval budget=6000 tokens
+source snippet cap=1200 chars
+answer_max_tokens=512
+max_input_tokens=9000
+```
+
+On a 3-query smoke, this `small` regime stayed under budget while retaining source snippets:
+
+- `hi`: mean input ~4.4k tokens
+- `hi_minmax_budgeted`: mean input ~5.5k tokens
+- `hi_rerank_weighted`: mean input ~4.0k tokens
+
+This is a much better answer-eval shape than the original ~30k-token contexts.
+
 ## Recommended Project Plan From Here
 
 1. Run q30 answer generation with:

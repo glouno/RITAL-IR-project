@@ -43,6 +43,7 @@ class QueryParam:
     max_token_for_bridge_knowledge: int = 12500
     max_token_for_community_report: int = 12500
     community_single_one: bool = False
+    text_unit_snippet_chars: int | None = None
     debug_info: dict = field(default_factory=dict)
 
 

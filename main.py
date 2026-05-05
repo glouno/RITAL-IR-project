@@ -201,6 +201,7 @@ def create_vllm_chat_model(runtime: dict[str, Any]) -> Any:
         openai_async_client = openai_module.AsyncOpenAI(
             base_url=runtime["base_url"],
             api_key=runtime["api_key"],
+            timeout=runtime.get("request_timeout"),
         )
         return openai_async_client
 

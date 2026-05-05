@@ -326,3 +326,33 @@ Relevant files:
 - [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
 - [docs/RETRIEVAL_EXPERIMENTS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_EXPERIMENTS.md)
 - [docs/RETRIEVAL_RESULTS_AND_NEXT_IDEAS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_RESULTS_AND_NEXT_IDEAS.md)
+
+## OpenAI Batch Export And Compact Answer Budgets
+
+### 2026-05-05
+
+Added a reliable batch-export route and tightened answer-level context construction.
+
+What changed:
+
+- Added OpenAI Batch API JSONL export for answer generation requests.
+- Added compact answer-context construction that builds context first, estimates chat prompt tokens, and shrinks budgets before generation/export.
+- Added explicit answer token cap and request timeout to the local answer harness.
+- Added bounded source-document snippets so compact contexts keep source evidence instead of dropping full chunks.
+- Added a retrieval budget sweep script for comparing tiny/small/medium/large answer-context regimes.
+
+Validation:
+
+- `uv run pytest tests/test_main_runtime.py tests/test_answer_level_evaluation.py tests/test_hirag_retrieval_experiments.py`
+- `uv run python eval/export_openai_batch_requests.py --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 --query-file eval/datasets/agriculture/agriculture_query.jsonl --query-limit 2 --variants hi hi_minmax_budgeted --model gpt-5.4-mini --output-dir .runs/openai_batch/dev_snippet_smoke --overwrite --include-contexts`
+- `uv run python eval/answer_generation_benchmark.py --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 --query-file eval/datasets/agriculture/agriculture_query.jsonl --query-limit 1 --variants hi hi_minmax_budgeted --output-dir .runs/answer_eval/dev_compact_smoke --overwrite --chat-model nvidia/Gemma-4-31B-IT-NVFP4 --base-url http://127.0.0.1:8000/v1 --api-key EMPTY --request-timeout-seconds 120`
+- `uv run python eval/retrieval_budget_sweep.py --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 --query-file eval/datasets/agriculture/agriculture_query.jsonl --query-limit 3 --variants hi hi_minmax_budgeted hi_rerank_weighted --regimes tiny small medium --output-dir .runs/retrieval_budget_sweep/dev_snippet_smoke`
+
+Relevant files:
+
+- [eval/export_openai_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_requests.py)
+- [eval/retrieval_budget_sweep.py](/home/paulbeglin/projects/RITAL-IR-project/eval/retrieval_budget_sweep.py)
+- [eval/eval_utils.py](/home/paulbeglin/projects/RITAL-IR-project/eval/eval_utils.py)
+- [eval/answer_generation_benchmark.py](/home/paulbeglin/projects/RITAL-IR-project/eval/answer_generation_benchmark.py)
+- [src/hirag/base.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/base.py)
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)

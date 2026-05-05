@@ -14,6 +14,7 @@ from hirag._op import (
     _minmax_budgeted_path,
     _ordered_unique,
     _rerank_entity_node_datas,
+    _text_unit_context_content,
     _write_edge_embedding_disk_cache,
     _weighted_dijkstra_path,
 )
@@ -123,6 +124,13 @@ class RetrievalExperimentTests(unittest.TestCase):
             _write_edge_embedding_disk_cache(cache_file.name, data)
             loaded = _load_edge_embedding_disk_cache(cache_file.name)
         self.assertEqual(loaded["edge_embeddings"]["A|B"]["embedding"], [1.0, 0.0])
+
+    def test_text_unit_snippet_keeps_context_bounded(self) -> None:
+        text = _text_unit_context_content(
+            {"content": "abcdef"},
+            QueryParam(text_unit_snippet_chars=3),
+        )
+        self.assertEqual(text, "abc ...")
 
     def test_reranker_fallback_preserves_dense_order(self) -> None:
         nodes = [

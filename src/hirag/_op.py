@@ -1446,6 +1446,14 @@ def _edge_description_text(graph: nx.Graph, source: str, target: str, edge_data:
     )
 
 
+def _text_unit_context_content(text_unit: dict, query_param: QueryParam) -> str:
+    content = str(text_unit.get("content", ""))
+    snippet_chars = query_param.text_unit_snippet_chars
+    if snippet_chars is None or snippet_chars <= 0 or len(content) <= snippet_chars:
+        return content
+    return content[:snippet_chars].rstrip() + " ..."
+
+
 def _graph_cache_identity(graph: nx.Graph, knowledge_graph_inst: BaseGraphStorage) -> str:
     graph_file = getattr(knowledge_graph_inst, "_graphml_xml_file", None)
     if graph_file:
@@ -1991,7 +1999,7 @@ async def _build_local_query_context(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, t["content"]])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return f"""
 -----Reports-----
@@ -2198,7 +2206,7 @@ async def _build_hierarchical_query_context(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, t["content"]])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
 
     # display reference info
@@ -2393,7 +2401,7 @@ async def _build_hibridge_query_context(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, t["content"]])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return f"""
 -----Reasoning Path-----
@@ -2454,7 +2462,7 @@ async def _build_higlobal_query_context(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, t["content"]])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return f"""
 -----Backgrounds-----
@@ -2535,7 +2543,7 @@ async def _build_hilocal_query_context(
     
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, t["content"]])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return f"""
 -----Entities-----
@@ -2654,7 +2662,7 @@ async def _build_hierarchical_query_context_common(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, t["content"]])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
 
     query_param.debug_info.update(

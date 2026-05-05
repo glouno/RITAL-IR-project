@@ -269,6 +269,81 @@ Smoke observation:
 - the local judge preferred `hi_minmax_budgeted` in both swapped orders
 - this is not evidence of a real win yet; it only proves the full answer/judge/human-packet pipeline is runnable
 
+### Robust Compact Answer Mode
+
+The first q30 local run showed that the old answer harness could overflow the 12k-token local vLLM context window. The root cause was not the question text; it was context bloat from large local/global/bridge sections and full source chunks.
+
+The robust answer path now:
+
+- builds retrieval context first with `only_need_context=True`
+- estimates the final chat prompt token count before generation
+- shrinks retrieval budgets if needed
+- caps answer generation with `--answer-max-tokens`
+- applies request timeouts
+- keeps source evidence through `--text-unit-snippet-chars` instead of either dropping source chunks or sending full giant chunks
+
+Recommended local defaults:
+
+```bash
+--top-k 12 \
+--top-m 6 \
+--max-token-for-local-context 1000 \
+--max-token-for-bridge-knowledge 1000 \
+--max-token-for-community-report 1000 \
+--max-token-for-text-unit 6000 \
+--text-unit-snippet-chars 1200 \
+--max-input-tokens 9000 \
+--answer-max-tokens 512
+```
+
+The source-text change matters: low text-unit token budgets used to drop source chunks entirely because chunks are large. Now we can retrieve a few source chunks but include bounded snippets in the final prompt.
+
+Small sweep result on 3 agriculture queries:
+
+- `tiny`: ~2.1k-3.4k input tokens depending on variant
+- `small`: ~4.0k-5.5k input tokens
+- `medium`: ~6.1k-8.0k input tokens
+
+All tested compact regimes stayed under their prompt budget. `small` is the current recommended q30 starting point because it keeps source snippets and leaves enough room for a 512-token answer on the local 12k model.
+
+## OpenAI Batch Export
+
+`eval/export_openai_batch_requests.py` creates OpenAI Batch API JSONL request files. Each line has:
+
+```json
+{
+  "custom_id": "answer|0|hi_minmax_budgeted",
+  "method": "POST",
+  "url": "/v1/chat/completions",
+  "body": {
+    "model": "gpt-5.4-mini",
+    "messages": [],
+    "max_tokens": 512
+  }
+}
+```
+
+Example:
+
+```bash
+uv run python eval/export_openai_batch_requests.py \
+  --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 \
+  --query-file eval/datasets/agriculture/agriculture_query.jsonl \
+  --query-limit 30 \
+  --variants hi hi_minmax_budgeted hi_rerank_weighted \
+  --model gpt-5.4-mini \
+  --output-dir .runs/openai_batch/agriculture_q30_mini \
+  --include-contexts
+```
+
+Outputs:
+
+- `answer_requests.jsonl`: upload this as the Batch API input file
+- `manifest.json`: request counts, token estimates, estimated batch cost
+- `contexts.jsonl`: optional local inspection copy with resolved contexts
+
+The exported requests are independent: one request per `(query, variant)`. Answer generation batch files should be run before judge batch files because pairwise judging needs the generated answers.
+
 ## Budgeted Minmax And Edge Cache
 
 `hi_minmax_budgeted` keeps the same query-weighted edge costs as `hi_minmax`, then searches for paths that minimize the worst edge cost while respecting:

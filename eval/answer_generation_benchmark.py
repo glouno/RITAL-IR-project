@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import sys
 import time
@@ -18,16 +19,21 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from eval.eval_utils import (
+    DEFAULT_ANSWER_MAX_TOKENS,
+    DEFAULT_ANSWER_VARIANTS,
     DEFAULT_QUERY_FILE,
     DEFAULT_WORKING_DIR,
     REPO_MAIN,
+    add_answer_context_args,
     add_runtime_args,
+    build_answer_messages,
+    build_context_with_budget,
     build_fastembed_hirag,
     load_queries,
 )
 
 
-DEFAULT_VARIANTS = ["hi", "hi_weighted", "hi_minmax", "hi_rerank_weighted"]
+DEFAULT_VARIANTS = DEFAULT_ANSWER_VARIANTS
 
 
 def parse_args() -> argparse.Namespace:
@@ -42,13 +48,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--api-key", default="EMPTY")
     parser.add_argument("--chat-model", default=None)
     parser.add_argument("--model-max-context", type=int, default=None)
-    parser.add_argument("--top-k", type=int, default=20)
-    parser.add_argument("--top-m", type=int, default=10)
-    parser.add_argument("--response-type", default="Multiple Paragraphs")
-    parser.add_argument("--max-token-for-local-context", type=int, default=2000)
-    parser.add_argument("--max-token-for-bridge-knowledge", type=int, default=2500)
-    parser.add_argument("--max-token-for-community-report", type=int, default=2500)
-    parser.add_argument("--max-token-for-text-unit", type=int, default=2500)
+    parser.add_argument("--request-timeout-seconds", type=float, default=180.0)
+    add_answer_context_args(parser)
     parser.add_argument("--llm-cache", action="store_true")
     add_runtime_args(parser)
     return parser.parse_args()
@@ -104,6 +105,7 @@ def main() -> None:
         "api_key": args.api_key,
         "chat_model": chat_model,
         "model_max_context": model_max_context,
+        "request_timeout": args.request_timeout_seconds,
     }
     llm_func = REPO_MAIN.create_vllm_chat_model(runtime)
     graph = build_fastembed_hirag(args, llm_func=llm_func, enable_llm_cache=args.llm_cache)
@@ -116,22 +118,38 @@ def main() -> None:
                 key = (str(query_item["query_id"]), variant)
                 if key in done:
                     continue
-                param = QueryParam(
-                    mode=variant,
-                    only_need_context=False,
-                    top_k=args.top_k,
-                    top_m=args.top_m,
-                    response_type=args.response_type,
-                    max_token_for_local_context=args.max_token_for_local_context,
-                    max_token_for_bridge_knowledge=args.max_token_for_bridge_knowledge,
-                    max_token_for_community_report=args.max_token_for_community_report,
-                    max_token_for_text_unit=args.max_token_for_text_unit,
-                )
                 start = time.perf_counter()
                 error = None
                 answer = ""
+                param = QueryParam(mode=variant)
+                budget_debug: dict[str, Any] = {}
                 try:
-                    answer = graph.query(query_item["query"], param=param)
+                    context, param, budget_debug = build_context_with_budget(
+                        graph,
+                        query_item["query"],
+                        variant,
+                        args,
+                    )
+                    messages = build_answer_messages(
+                        query_item["query"],
+                        context,
+                        args.response_type,
+                    )
+
+                    async def _call_answer() -> str:
+                        return await llm_func(
+                            messages[-1]["content"],
+                            system_prompt=messages[0]["content"],
+                            stage="query_answer",
+                            max_tokens=args.answer_max_tokens or DEFAULT_ANSWER_MAX_TOKENS,
+                        )
+
+                    answer = asyncio.run(
+                        asyncio.wait_for(
+                            _call_answer(),
+                            timeout=args.request_timeout_seconds,
+                        )
+                    )
                 except Exception as exc:
                     error = f"{type(exc).__name__}: {exc}"
                 elapsed = time.perf_counter() - start
@@ -141,7 +159,10 @@ def main() -> None:
                     "variant": variant,
                     "answer": answer,
                     "latency_seconds": elapsed,
-                    "context_debug": compact_debug(dict(param.debug_info)),
+                    "context_debug": {
+                        **compact_debug(dict(param.debug_info)),
+                        **budget_debug,
+                    },
                     "error": error,
                 }
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")

@@ -11,6 +11,12 @@ from eval.build_human_annotation_packet import (
     choose_queries,
     load_answers as load_human_answers,
 )
+from eval.eval_utils import (
+    batch_custom_id,
+    build_answer_messages,
+    estimate_chat_tokens,
+)
+from eval.export_openai_batch_requests import request_body
 from eval.pairwise_answer_judge import (
     build_prompt,
     map_winner,
@@ -82,6 +88,28 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
             rows = list(csv.DictReader((output_dir / "judge_summary.csv").open()))
         self.assertEqual(rows[0]["variant"], "hi_minmax")
         self.assertEqual(float(rows[0]["win_rate"]), 0.5)
+
+    def test_openai_batch_request_shape(self) -> None:
+        messages = build_answer_messages(
+            "What is compost?",
+            "-----Backgrounds-----\ncompost context",
+            "Short answer",
+        )
+        body = request_body(
+            Namespace(model="gpt-5.4-mini", answer_max_tokens=256, temperature=None),
+            messages,
+        )
+        request = {
+            "custom_id": batch_custom_id("q1", "hi_minmax_budgeted"),
+            "method": "POST",
+            "url": "/v1/chat/completions",
+            "body": body,
+        }
+        self.assertEqual(request["method"], "POST")
+        self.assertEqual(request["url"], "/v1/chat/completions")
+        self.assertEqual(request["body"]["model"], "gpt-5.4-mini")
+        self.assertEqual(request["body"]["max_tokens"], 256)
+        self.assertGreater(estimate_chat_tokens(messages), 0)
 
     def test_human_packet_sampling_and_anonymization(self) -> None:
         variants = ["hi", "hi_weighted", "hi_minmax", "hi_rerank_weighted"]

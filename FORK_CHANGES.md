@@ -411,3 +411,25 @@ Relevant files:
 - [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
 - [eval/eval_utils.py](/home/paulbeglin/projects/RITAL-IR-project/eval/eval_utils.py)
 - [eval/retrieval_budget_sweep.py](/home/paulbeglin/projects/RITAL-IR-project/eval/retrieval_budget_sweep.py)
+
+## OpenAI Batch Completion Token Parameter
+
+### 2026-05-05
+
+Fixed OpenAI Batch request exports for GPT-5.x Chat Completions models.
+
+What changed:
+
+- Replaced the default Batch output-token field from legacy `max_tokens` to `max_completion_tokens`.
+- Added `--completion-token-param {max_completion_tokens,max_tokens,none}` to both answer and judge batch exporters.
+- Updated tests and docs so GPT-5.4/GPT-5.4-mini Batch JSONL files do not include unsupported `max_tokens`.
+
+Reason:
+
+- The first submitted OpenAI Batch returned `400 unsupported_parameter` for every row: `max_tokens` is not supported with this model; use `max_completion_tokens` instead.
+
+Relevant files:
+
+- [eval/export_openai_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_requests.py)
+- [eval/export_openai_judge_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_judge_batch_requests.py)
+- [tests/test_answer_level_evaluation.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_answer_level_evaluation.py)

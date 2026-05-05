@@ -28,6 +28,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-file-name", default="judge_requests.jsonl")
     parser.add_argument("--max-tokens", type=int, default=1024)
     parser.add_argument("--temperature", type=float, default=None)
+    parser.add_argument(
+        "--completion-token-param",
+        choices=["max_completion_tokens", "max_tokens", "none"],
+        default="max_completion_tokens",
+        help=(
+            "Output-token limit parameter to emit. GPT-5.x Chat Completions "
+            "requires max_completion_tokens; older OpenAI-compatible backends "
+            "may require max_tokens."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -43,8 +53,9 @@ def request_body(args: argparse.Namespace, query: str, answer1: str, answer2: st
             {"role": "system", "content": "You are a careful answer evaluator. Return only JSON."},
             {"role": "user", "content": build_prompt(query, answer1, answer2)},
         ],
-        "max_tokens": args.max_tokens,
     }
+    if args.completion_token_param != "none":
+        body[args.completion_token_param] = args.max_tokens
     if args.temperature is not None:
         body["temperature"] = args.temperature
     return body
@@ -108,6 +119,7 @@ def main() -> None:
         "model": args.model,
         "request_count": written,
         "skipped_missing_answer_requests": skipped,
+        "completion_token_param": args.completion_token_param,
         "baseline": args.baseline,
         "variants": args.variants,
         "upload_hint": (

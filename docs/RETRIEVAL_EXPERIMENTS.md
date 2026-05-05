@@ -318,10 +318,12 @@ All tested compact regimes stayed under their prompt budget. `small` is the curr
   "body": {
     "model": "gpt-5.4-mini",
     "messages": [],
-    "max_tokens": 512
+    "max_completion_tokens": 512
   }
 }
 ```
+
+For GPT-5.x Chat Completions models, use `max_completion_tokens`. The exporters default to that parameter after the first OpenAI Batch attempt failed with `Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.` Use `--completion-token-param max_tokens` only for older OpenAI-compatible backends that require the legacy field.
 
 Example:
 

@@ -18,6 +18,7 @@ from eval.eval_utils import (
 )
 from eval.export_openai_batch_requests import request_body
 from eval.export_openai_judge_batch_requests import judge_custom_id
+from eval.export_openai_judge_batch_requests import request_body as judge_request_body
 from eval.import_openai_batch_answers import convert_rows as convert_answer_batch_rows
 from eval.import_openai_batch_answers import load_context_metadata
 from eval.import_openai_batch_judgments import convert_rows as convert_judge_batch_rows
@@ -101,7 +102,12 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
             "Short answer",
         )
         body = request_body(
-            Namespace(model="gpt-5.4-mini", answer_max_tokens=256, temperature=None),
+            Namespace(
+                model="gpt-5.4-mini",
+                answer_max_tokens=256,
+                temperature=None,
+                completion_token_param="max_completion_tokens",
+            ),
             messages,
         )
         request = {
@@ -113,7 +119,8 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
         self.assertEqual(request["method"], "POST")
         self.assertEqual(request["url"], "/v1/chat/completions")
         self.assertEqual(request["body"]["model"], "gpt-5.4-mini")
-        self.assertEqual(request["body"]["max_tokens"], 256)
+        self.assertEqual(request["body"]["max_completion_tokens"], 256)
+        self.assertNotIn("max_tokens", request["body"])
         self.assertGreater(estimate_chat_tokens(messages), 0)
 
     def test_openai_answer_batch_import(self) -> None:
@@ -156,6 +163,21 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
         self.assertEqual(rows[0]["answer"], "Answer text")
         self.assertEqual(rows[0]["variant"], "hi")
         self.assertIsNone(rows[0]["error"])
+
+    def test_openai_judge_batch_request_uses_completion_tokens(self) -> None:
+        body = judge_request_body(
+            Namespace(
+                model="gpt-5.4-mini",
+                max_tokens=512,
+                temperature=None,
+                completion_token_param="max_completion_tokens",
+            ),
+            "Question",
+            "Answer A",
+            "Answer B",
+        )
+        self.assertEqual(body["max_completion_tokens"], 512)
+        self.assertNotIn("max_tokens", body)
 
     def test_openai_judge_batch_import(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

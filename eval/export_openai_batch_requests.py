@@ -48,6 +48,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--temperature", type=float, default=None)
     parser.add_argument(
+        "--completion-token-param",
+        choices=["max_completion_tokens", "max_tokens", "none"],
+        default="max_completion_tokens",
+        help=(
+            "Output-token limit parameter to emit. GPT-5.x Chat Completions "
+            "requires max_completion_tokens; older OpenAI-compatible backends "
+            "may require max_tokens."
+        ),
+    )
+    parser.add_argument(
         "--include-contexts",
         action="store_true",
         help="Also write resolved context text to contexts.jsonl for inspection",
@@ -76,8 +86,11 @@ def request_body(args: argparse.Namespace, messages: list[dict[str, str]]) -> di
     body: dict[str, Any] = {
         "model": args.model,
         "messages": messages,
-        "max_tokens": args.answer_max_tokens or DEFAULT_ANSWER_MAX_TOKENS,
     }
+    if args.completion_token_param != "none":
+        body[args.completion_token_param] = (
+            args.answer_max_tokens or DEFAULT_ANSWER_MAX_TOKENS
+        )
     if args.temperature is not None:
         body["temperature"] = args.temperature
     return body
@@ -203,6 +216,7 @@ def main() -> None:
         "mean_input_tokens_estimate": total_input_tokens / written if written else 0,
         "total_context_tokens_estimate": total_context_tokens,
         "max_output_tokens_per_request": args.answer_max_tokens,
+        "completion_token_param": args.completion_token_param,
         "expected_output_tokens_upper_bound": expected_output_tokens,
         "estimated_batch_cost_usd": estimated_cost,
         "errors": [row for row in rows if row["error"]],

@@ -356,3 +356,28 @@ Relevant files:
 - [eval/answer_generation_benchmark.py](/home/paulbeglin/projects/RITAL-IR-project/eval/answer_generation_benchmark.py)
 - [src/hirag/base.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/base.py)
 - [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+
+## OpenAI Batch Result Pipeline
+
+### 2026-05-05
+
+Added the downstream batch utilities needed after answer generation.
+
+What changed:
+
+- Added importer for OpenAI answer-batch outputs into the repo's normal `answers.jsonl` schema.
+- Added exporter for pairwise judge requests as OpenAI Batch JSONL.
+- Added importer for judge-batch outputs into `judge_results.jsonl`, `judge_summary.csv`, and `judge_summary.md`.
+- Added tests with synthetic OpenAI Batch output rows.
+
+Validation:
+
+- `uv run pytest tests/test_answer_level_evaluation.py tests/test_main_runtime.py`
+- `uv run python eval/export_openai_judge_batch_requests.py --answers .runs/answer_eval/dev_compact_smoke/answers.jsonl --baseline hi --variants hi_minmax_budgeted --model gpt-5.4-mini --output-dir .runs/answer_eval/dev_judge_batch_smoke`
+
+Relevant files:
+
+- [eval/import_openai_batch_answers.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_batch_answers.py)
+- [eval/export_openai_judge_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_judge_batch_requests.py)
+- [eval/import_openai_batch_judgments.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_batch_judgments.py)
+- [eval/pairwise_answer_judge.py](/home/paulbeglin/projects/RITAL-IR-project/eval/pairwise_answer_judge.py)

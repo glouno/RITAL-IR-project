@@ -17,6 +17,11 @@ from eval.eval_utils import (
     estimate_chat_tokens,
 )
 from eval.export_openai_batch_requests import request_body
+from eval.export_openai_judge_batch_requests import judge_custom_id
+from eval.import_openai_batch_answers import convert_rows as convert_answer_batch_rows
+from eval.import_openai_batch_answers import load_context_metadata
+from eval.import_openai_batch_judgments import convert_rows as convert_judge_batch_rows
+from eval.import_openai_batch_judgments import load_metadata as load_judge_metadata
 from eval.pairwise_answer_judge import (
     build_prompt,
     map_winner,
@@ -110,6 +115,101 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
         self.assertEqual(request["body"]["model"], "gpt-5.4-mini")
         self.assertEqual(request["body"]["max_tokens"], 256)
         self.assertGreater(estimate_chat_tokens(messages), 0)
+
+    def test_openai_answer_batch_import(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            contexts = tmp / "contexts.jsonl"
+            output = tmp / "batch_output.jsonl"
+            contexts.write_text(
+                json.dumps(
+                    {
+                        "custom_id": "answer|0|hi",
+                        "query_id": 0,
+                        "query": "Question",
+                        "variant": "hi",
+                        "context_debug": {"context_input_tokens": 123},
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            output.write_text(
+                json.dumps(
+                    {
+                        "custom_id": "answer|0|hi",
+                        "response": {
+                            "status_code": 200,
+                            "body": {
+                                "id": "resp_1",
+                                "choices": [{"message": {"content": "Answer text"}}],
+                                "usage": {"prompt_tokens": 10, "completion_tokens": 2},
+                            },
+                        },
+                        "error": None,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            rows = convert_answer_batch_rows(output, load_context_metadata(contexts))
+        self.assertEqual(rows[0]["answer"], "Answer text")
+        self.assertEqual(rows[0]["variant"], "hi")
+        self.assertIsNone(rows[0]["error"])
+
+    def test_openai_judge_batch_import(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            custom_id = judge_custom_id("0", "hi", "hi_minmax_budgeted", "variant_first")
+            metadata = tmp / "judge_meta.jsonl"
+            output = tmp / "judge_output.jsonl"
+            metadata.write_text(
+                json.dumps(
+                    {
+                        "custom_id": custom_id,
+                        "query_id": "0",
+                        "query": "Question",
+                        "variant_a": "hi",
+                        "variant_b": "hi_minmax_budgeted",
+                        "answer_order": "variant_first",
+                        "order": ["hi_minmax_budgeted", "hi"],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            output.write_text(
+                json.dumps(
+                    {
+                        "custom_id": custom_id,
+                        "response": {
+                            "status_code": 200,
+                            "body": {
+                                "choices": [
+                                    {
+                                        "message": {
+                                            "content": json.dumps(
+                                                {
+                                                    "Comprehensiveness": {"Winner": "Answer 1", "Explanation": ""},
+                                                    "Diversity": {"Winner": "Tie", "Explanation": ""},
+                                                    "Empowerment": {"Winner": "Answer 1", "Explanation": ""},
+                                                    "Overall Winner": {"Winner": "Answer 1", "Explanation": "better"},
+                                                }
+                                            )
+                                        }
+                                    }
+                                ]
+                            },
+                        },
+                        "error": None,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            rows = convert_judge_batch_rows(output, load_judge_metadata(metadata))
+        self.assertEqual(rows[0]["overall_winner"], "hi_minmax_budgeted")
+        self.assertIsNone(rows[0]["parse_error"])
 
     def test_human_packet_sampling_and_anonymization(self) -> None:
         variants = ["hi", "hi_weighted", "hi_minmax", "hi_rerank_weighted"]

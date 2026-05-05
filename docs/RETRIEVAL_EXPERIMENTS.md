@@ -344,6 +344,43 @@ Outputs:
 
 The exported requests are independent: one request per `(query, variant)`. Answer generation batch files should be run before judge batch files because pairwise judging needs the generated answers.
 
+## Batch Result Import And Judge Export
+
+After an OpenAI answer batch finishes, download its output JSONL and convert it back into the repo's normal `answers.jsonl` schema:
+
+```bash
+uv run python eval/import_openai_batch_answers.py \
+  --batch-output path/to/openai_answer_batch_output.jsonl \
+  --contexts .runs/openai_batch/agriculture_q30_mini/contexts.jsonl \
+  --output-dir .runs/answer_eval/agriculture_q30_mini_imported
+```
+
+Then create pairwise judge batch requests from those answers:
+
+```bash
+uv run python eval/export_openai_judge_batch_requests.py \
+  --answers .runs/answer_eval/agriculture_q30_mini_imported/answers.jsonl \
+  --baseline hi \
+  --variants hi_minmax_budgeted hi_rerank_weighted \
+  --model gpt-5.4-mini \
+  --output-dir .runs/answer_eval/agriculture_q30_mini_judge_batch
+```
+
+Upload `judge_requests.jsonl` as a second OpenAI batch. When it finishes, import the judge output:
+
+```bash
+uv run python eval/import_openai_batch_judgments.py \
+  --batch-output path/to/openai_judge_batch_output.jsonl \
+  --metadata .runs/answer_eval/agriculture_q30_mini_judge_batch/judge_request_metadata.jsonl \
+  --output-dir .runs/answer_eval/agriculture_q30_mini_judge_results
+```
+
+This writes the same files as local judging:
+
+- `judge_results.jsonl`
+- `judge_summary.csv`
+- `judge_summary.md`
+
 ## Budgeted Minmax And Edge Cache
 
 `hi_minmax_budgeted` keeps the same query-weighted edge costs as `hi_minmax`, then searches for paths that minimize the worst edge cost while respecting:

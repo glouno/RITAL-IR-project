@@ -515,19 +515,42 @@ flowchart LR
     References[Reference answers] --> Metrics
 ```
 
+## Current Implementation Update
+
+The next implementation step is now in place:
+
+- `hi_minmax_budgeted` exists as an experimental query mode.
+- Weighted bridge edge embeddings are persisted on disk in `.runs/edge_embedding_cache/`.
+- Answer-level generation, pairwise judging, and blind human-annotation packet scripts exist under `eval/`.
+- A one-query agriculture smoke generated answers for `hi` and `hi_minmax_budgeted`, judged them in both answer orders, and produced a human packet.
+
+The first answer-level smoke is only a pipeline check. It is too small to claim a result, but it is important because it moves us beyond proxy-only context metrics.
+
+```mermaid
+flowchart TD
+    RetrievalVariants[hi / weighted / minmax / budgeted / rerank] --> AnswerHarness[answer_generation_benchmark.py]
+    AnswerHarness --> Answers[answers.jsonl]
+    Answers --> Judge[pairwise_answer_judge.py]
+    Answers --> HumanPacket[build_human_annotation_packet.py]
+    Judge --> WinRates[criterion win rates]
+    HumanPacket --> BlindReview[human annotation]
+    WinRates --> Report[project report]
+    BlindReview --> Report
+```
+
 ## Recommended Project Plan From Here
 
-1. Implement `hi_minmax_budgeted`.
-2. Add persistent edge embedding cache.
-3. Rerun q50 or q100 with:
+1. Run q30 answer generation with:
    - `hi`
    - `hi_weighted`
    - `hi_minmax`
    - `hi_minmax_budgeted`
    - `hi_rerank_weighted`
-4. Update notebooks with the new variant.
-5. Pick 2-3 qualitative examples from the notebooks.
-6. Run answer-level evaluation on the best 2-3 variants.
+2. Judge q30 locally first, then repeat with an external judge if available.
+3. Build the 30-query blind human annotation packet.
+4. Rerun q50 or q100 context metrics including `hi_minmax_budgeted` now that edge embeddings are cached.
+5. Update notebooks with the answer-level win rates and proxy-vs-judge comparisons.
+6. Pick 2-3 qualitative examples from the notebooks.
 7. Write the project report around this claim:
 
 > HiRAG's bridge retrieval can be improved by query-conditioned path selection. Minmax path selection improves local/global/query bridge alignment, but must be budgeted to avoid context bloat.
@@ -537,4 +560,3 @@ flowchart LR
 The strongest story is:
 
 > HiRAG correctly identifies the need for bridge knowledge between local entities and global communities. However, the baseline bridge path is still too topology-driven. We make bridge retrieval query-conditioned using weighted and minmax path search. Experiments show minmax improves bridge alignment with local, global, and query context, but increases path length. We therefore propose budgeted minmax as the next refinement: keeping query-relevant paths while controlling retrieval cost.
-

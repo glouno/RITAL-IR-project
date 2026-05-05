@@ -292,3 +292,37 @@ Relevant files:
 - [eval/analyze_cluster_balance.py](/home/paulbeglin/projects/RITAL-IR-project/eval/analyze_cluster_balance.py)
 - [docs/NEXT_STEPS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/NEXT_STEPS.md)
 - [docs/RETRIEVAL_EXPERIMENTS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_EXPERIMENTS.md)
+
+## Answer-Level Retrieval Evaluation
+
+### 2026-05-05
+
+Added the next evaluation layer for the retrieval branch and the first budget-controlled bridge variant.
+
+What changed:
+
+- Added `hi_minmax_budgeted`, which uses query-weighted minmax bridge paths with per-path and total bridge edge budgets.
+- Added disk persistence for weighted bridge edge embeddings under `.runs/edge_embedding_cache/`.
+- Added an answer generation benchmark that runs saved HiRAG graphs against selected query modes and writes resumable `answers.jsonl`.
+- Added an OpenAI-compatible pairwise judge harness with swapped answer order and paper-style criteria: comprehensiveness, diversity, empowerment, and overall winner.
+- Added a blind human annotation packet builder for human comparison rounds.
+- Added answer-level unit tests for resume keys, judge prompt/parsing/summary, human anonymization, and sampling buckets.
+- Increased the local vLLM answer-call safety buffer to avoid server-side context-window rejections on long graph prompts.
+
+Validation:
+
+- `uv run pytest tests/test_main_runtime.py tests/test_retrieval.py tests/test_hierarchy.py tests/test_hirag_retrieval_experiments.py tests/test_cluster_balance.py tests/test_answer_level_evaluation.py`
+- `uv run python eval/retrieval_context_benchmark.py --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 --query-file eval/datasets/agriculture/agriculture_query.jsonl --query-limit 2 --variants hi hi_minmax_budgeted --output-dir .runs/retrieval_eval/dev_budgeted_smoke`
+- `uv run python eval/answer_generation_benchmark.py --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 --query-file eval/datasets/agriculture/agriculture_query.jsonl --query-limit 1 --variants hi hi_minmax_budgeted --output-dir .runs/answer_eval/dev_smoke --overwrite --chat-model nvidia/Gemma-4-31B-IT-NVFP4`
+- `uv run python eval/pairwise_answer_judge.py --answers .runs/answer_eval/dev_smoke/answers.jsonl --baseline hi --variants hi_minmax_budgeted --judge-base-url http://127.0.0.1:8000/v1 --judge-api-key EMPTY --judge-model nvidia/Gemma-4-31B-IT-NVFP4 --output-dir .runs/answer_eval/dev_smoke_judge --max-concurrency 1 --overwrite`
+- `uv run python eval/build_human_annotation_packet.py --answers .runs/answer_eval/dev_smoke/answers.jsonl --judge-results .runs/answer_eval/dev_smoke_judge/judge_results.jsonl --query-count 1 --variants hi hi_minmax_budgeted --output-dir .runs/human_eval/dev_smoke`
+
+Relevant files:
+
+- [eval/answer_generation_benchmark.py](/home/paulbeglin/projects/RITAL-IR-project/eval/answer_generation_benchmark.py)
+- [eval/pairwise_answer_judge.py](/home/paulbeglin/projects/RITAL-IR-project/eval/pairwise_answer_judge.py)
+- [eval/build_human_annotation_packet.py](/home/paulbeglin/projects/RITAL-IR-project/eval/build_human_annotation_packet.py)
+- [eval/eval_utils.py](/home/paulbeglin/projects/RITAL-IR-project/eval/eval_utils.py)
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [docs/RETRIEVAL_EXPERIMENTS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_EXPERIMENTS.md)
+- [docs/RETRIEVAL_RESULTS_AND_NEXT_IDEAS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_RESULTS_AND_NEXT_IDEAS.md)

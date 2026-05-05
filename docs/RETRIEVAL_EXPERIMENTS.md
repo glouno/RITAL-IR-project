@@ -206,8 +206,83 @@ The active experimental modes are:
 - `hi`: baseline HiRAG.
 - `hi_weighted`: baseline local retrieval plus query-weighted bridge paths.
 - `hi_minmax`: baseline local retrieval plus minmax bridge paths.
+- `hi_minmax_budgeted`: minmax bridge paths with per-segment and total bridge edge budgets.
 - `hi_rerank`: FastEmbed late-interaction local reranking plus baseline bridge.
 - `hi_rerank_weighted`: reranked local retrieval plus query-weighted bridge paths.
+
+## Answer-Level Evaluation Harness
+
+Agriculture has 100 queries, but the checked-in `agriculture_query.jsonl` does not include ground-truth answers. For this dataset, the answer-level loop is therefore:
+
+```mermaid
+flowchart LR
+    Queries[Agriculture queries] --> Generate[Generate answers per variant]
+    Generate --> Answers[answers.jsonl]
+    Answers --> Judge[Pairwise LLM judge]
+    Answers --> Human[Blind human packet]
+    Judge --> JudgeSummary[judge_summary.csv/md]
+    Human --> HumanLabels[Human annotations]
+```
+
+Implemented scripts:
+
+- `eval/answer_generation_benchmark.py`: runs selected HiRAG modes with `only_need_context=False` and writes resumable `answers.jsonl`.
+- `eval/pairwise_answer_judge.py`: compares generated answers through an OpenAI-compatible judge, using swapped answer order to reduce positional bias.
+- `eval/build_human_annotation_packet.py`: creates blind `Answer A/B/...` annotation packets for humans.
+
+The answer harness now discovers the local model context window even when `--chat-model` is provided, and uses conservative context-budget defaults so the local 12k-token vLLM model can answer long HiRAG contexts.
+
+Tiny smoke run:
+
+```bash
+uv run python eval/answer_generation_benchmark.py \
+  --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 \
+  --query-file eval/datasets/agriculture/agriculture_query.jsonl \
+  --query-limit 1 \
+  --variants hi hi_minmax_budgeted \
+  --output-dir .runs/answer_eval/dev_smoke \
+  --overwrite \
+  --chat-model nvidia/Gemma-4-31B-IT-NVFP4
+
+uv run python eval/pairwise_answer_judge.py \
+  --answers .runs/answer_eval/dev_smoke/answers.jsonl \
+  --baseline hi \
+  --variants hi_minmax_budgeted \
+  --judge-base-url http://127.0.0.1:8000/v1 \
+  --judge-api-key EMPTY \
+  --judge-model nvidia/Gemma-4-31B-IT-NVFP4 \
+  --output-dir .runs/answer_eval/dev_smoke_judge \
+  --max-concurrency 1 \
+  --overwrite
+
+uv run python eval/build_human_annotation_packet.py \
+  --answers .runs/answer_eval/dev_smoke/answers.jsonl \
+  --judge-results .runs/answer_eval/dev_smoke_judge/judge_results.jsonl \
+  --query-count 1 \
+  --variants hi hi_minmax_budgeted \
+  --output-dir .runs/human_eval/dev_smoke
+```
+
+Smoke observation:
+
+- both `hi` and `hi_minmax_budgeted` generated non-error answers for query 0
+- the local judge preferred `hi_minmax_budgeted` in both swapped orders
+- this is not evidence of a real win yet; it only proves the full answer/judge/human-packet pipeline is runnable
+
+## Budgeted Minmax And Edge Cache
+
+`hi_minmax_budgeted` keeps the same query-weighted edge costs as `hi_minmax`, then searches for paths that minimize the worst edge cost while respecting:
+
+- `bridge_max_path_edges`
+- `bridge_max_total_edges`
+- `bridge_budget_fallback`
+
+Budget/fallback decisions are recorded in `QueryParam.debug_info` and exported by the retrieval benchmark as:
+
+- `bridge_budget_fallbacks`
+- `bridge_budget_stopped`
+
+Weighted bridge edge embeddings are now cached under `.runs/edge_embedding_cache/` by default. The cache key includes the graph identity, embedding model/dimension, edge key, and edge text hash. This makes repeated weighted/minmax sweeps substantially cheaper after the first query has populated the cache.
 
 ## Smoke Results
 

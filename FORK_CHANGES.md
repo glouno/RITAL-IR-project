@@ -433,3 +433,38 @@ Relevant files:
 - [eval/export_openai_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_requests.py)
 - [eval/export_openai_judge_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_judge_batch_requests.py)
 - [tests/test_answer_level_evaluation.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_answer_level_evaluation.py)
+
+## OpenAI Batch Indexing Prototype
+
+### 2026-05-05
+
+Added the first reusable pieces for graph-construction batching.
+
+What changed:
+
+- Added an entity-extraction Batch exporter for HiRAG indexing chunks.
+- Added an importer/parser for entity-extraction Batch outputs.
+- Added a stage plan to the exporter manifest that documents which graph-indexing stages are batchable immediately and which stages are sequentially dependent on prior outputs.
+- Added tests for request shape, prompt construction, stage planning, and entity-output parsing.
+
+Current scope:
+
+- This only covers the first graph-indexing LLM stage: `entity_extract`.
+- The next stage, `relation_extract`, requires imported per-chunk entities from the first batch before its requests can be built.
+- Later `cluster_summary` and `community_report` stages are batchable within each layer/level, but layers/levels are sequential.
+
+Smoke:
+
+- `uv run python eval/export_openai_index_entity_batch.py --context-file eval/datasets/agriculture/agriculture_unique_contexts.json --model gpt-5.4-mini --output-dir .runs/openai_index_batch/agriculture_entity_extract_smoke --prompt-regime ultra_lean --overwrite`
+- Result: 1,756 entity-extraction requests for agriculture, 12 source documents, about 2.52M estimated input tokens, using `max_completion_tokens`.
+- A local JSONL validator confirmed 1,756 unique request IDs and no legacy `max_tokens` fields.
+
+Validation:
+
+- `uv run pytest tests/test_openai_index_batch.py tests/test_answer_level_evaluation.py`
+
+Relevant files:
+
+- [eval/export_openai_index_entity_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_index_entity_batch.py)
+- [eval/import_openai_index_entity_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_index_entity_batch.py)
+- [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)

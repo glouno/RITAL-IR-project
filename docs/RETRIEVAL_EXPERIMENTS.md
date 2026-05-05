@@ -383,6 +383,83 @@ This writes the same files as local judging:
 - `judge_summary.csv`
 - `judge_summary.md`
 
+## Graph Indexing Batch Prototype
+
+We now have the first stage of graph-construction batching:
+
+- `eval/export_openai_index_entity_batch.py`
+- `eval/import_openai_index_entity_batch.py`
+
+This exports HiRAG hierarchical entity-extraction prompts over the same chunking path used by live indexing.
+
+```bash
+uv run python eval/export_openai_index_entity_batch.py \
+  --context-file eval/datasets/agriculture/agriculture_unique_contexts.json \
+  --model gpt-5.4-mini \
+  --prompt-regime ultra_lean \
+  --output-dir .runs/openai_index_batch/agriculture_entity_extract \
+  --overwrite
+```
+
+Outputs:
+
+- `entity_extract_requests.jsonl`: uploadable OpenAI Batch request file
+- `entity_extract_metadata.jsonl`: chunk metadata keyed by `custom_id`
+- `manifest.json`: token estimates and sequential stage plan
+
+The first agriculture smoke produced:
+
+- 12 documents
+- 1,756 chunks / entity-extraction requests
+- ~2.52M estimated input tokens
+- 256 `max_completion_tokens` per request under `ultra_lean`
+
+Validated request properties:
+
+- `POST`
+- `/v1/chat/completions`
+- `max_completion_tokens`
+- no legacy `max_tokens`
+- unique `custom_id`s
+
+Import after Batch completion:
+
+```bash
+uv run python eval/import_openai_index_entity_batch.py \
+  --batch-output path/to/entity_extract_batch_output.jsonl \
+  --metadata .runs/openai_index_batch/agriculture_entity_extract/entity_extract_metadata.jsonl \
+  --output-dir .runs/openai_index_batch/agriculture_entity_extract_imported \
+  --prompt-regime ultra_lean
+```
+
+This writes parsed per-chunk entities to `entity_extract_results.jsonl`.
+
+Graph construction cannot be a single monolithic batch because several stages depend on previous outputs:
+
+```mermaid
+flowchart TD
+    Docs[Documents] --> Chunks[HiRAG chunks]
+    Chunks --> EBatch[Batch 1: entity_extract per chunk]
+    EBatch --> EImport[Import parsed chunk entities]
+    EImport --> RBatch[Batch 2: relation_extract per chunk]
+    RBatch --> RImport[Import parsed relations]
+    RImport --> Graph[Merge base graph + entity embeddings]
+    Graph --> GMM[GMM hierarchy layer]
+    GMM --> SBatch[Batch 3..N: cluster_summary per layer]
+    SBatch --> Communities[Leiden communities]
+    Communities --> CBatch[Batch N..M: community_report per community level]
+    CBatch --> Queryable[Queryable HiRAG graph]
+```
+
+So the likely OpenAI Batch indexing sequence is:
+
+1. Entity extraction batch.
+2. Relation extraction batch after entity import.
+3. One cluster-summary batch per hierarchy layer.
+4. One community-report batch per Leiden community level.
+
+For the first implementation, use `ultra_lean` and no gleaning. Gleaning adds additional conditional batches because each check/continue request depends on prior model responses.
+
 ## Query-Aware Source Snippets
 
 Compact answer contexts now support two source-snippet strategies:

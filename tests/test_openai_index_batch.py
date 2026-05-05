@@ -4,6 +4,14 @@ import unittest
 from argparse import Namespace
 from pathlib import Path
 
+import networkx as nx
+
+from eval.assemble_openai_index_base_graph import (
+    build_graph,
+    merge_entity_nodes,
+    merge_relation_edges,
+    write_outputs,
+)
 from eval.export_openai_index_entity_batch import (
     build_entity_prompt,
     request_body,
@@ -206,6 +214,93 @@ class OpenAIIndexBatchTests(unittest.TestCase):
             rows = convert_relation_rows(output, load_metadata(metadata), resolve_prompts("ultra_lean"))
         self.assertEqual(rows[0]["relation_count"], 1)
         self.assertIsNone(rows[0]["error"])
+
+    def test_assemble_base_graph_merges_duplicate_nodes_and_edges(self) -> None:
+        entity_rows = [
+            {
+                "error": None,
+                "entities": [
+                    {
+                        "entity_name": '"COMPOST"',
+                        "entity_type": '"CONCEPT"',
+                        "description": "Organic matter.",
+                        "source_id": "chunk-1",
+                    },
+                    {
+                        "entity_name": '"COMPOST"',
+                        "entity_type": '"CONCEPT"',
+                        "description": "Soil amendment.",
+                        "source_id": "chunk-2",
+                    },
+                    {
+                        "entity_name": '"SOIL HEALTH"',
+                        "entity_type": '"CONCEPT"',
+                        "description": "Soil quality.",
+                        "source_id": "chunk-1",
+                    },
+                ],
+            }
+        ]
+        relation_rows = [
+            {
+                "error": None,
+                "relations": [
+                    {
+                        "src_id": '"COMPOST"',
+                        "tgt_id": '"SOIL HEALTH"',
+                        "description": "Compost improves soil health.",
+                        "weight": 8.0,
+                        "source_id": "chunk-1",
+                    },
+                    {
+                        "src_id": '"SOIL HEALTH"',
+                        "tgt_id": '"COMPOST"',
+                        "description": "Soil health benefits from compost.",
+                        "weight": 3.0,
+                        "source_id": "chunk-2",
+                    },
+                ],
+            }
+        ]
+        nodes = merge_entity_nodes(entity_rows)
+        edges = merge_relation_edges(relation_rows)
+        graph = build_graph(nodes, edges)
+        self.assertEqual(graph.number_of_nodes(), 2)
+        self.assertEqual(graph.number_of_edges(), 1)
+        self.assertIn("Organic matter.", nodes['"COMPOST"']["description"])
+        self.assertIn("chunk-2", nodes['"COMPOST"']["source_id"])
+        edge = graph.edges[('"COMPOST"', '"SOIL HEALTH"')]
+        self.assertEqual(edge["weight"], 11.0)
+
+    def test_write_base_graph_outputs_graphml(self) -> None:
+        nodes = {
+            '"COMPOST"': {
+                "entity_type": '"CONCEPT"',
+                "description": "Organic matter.",
+                "source_id": "chunk-1",
+            },
+            '"SOIL HEALTH"': {
+                "entity_type": '"CONCEPT"',
+                "description": "Soil quality.",
+                "source_id": "chunk-1",
+            },
+        }
+        edges = {
+            ('"COMPOST"', '"SOIL HEALTH"'): {
+                "description": "Compost improves soil health.",
+                "source_id": "chunk-1",
+                "weight": 8.0,
+                "order": 1,
+            }
+        }
+        graph = build_graph(nodes, edges)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            write_outputs(output_dir, graph, "base.graphml", nodes, edges, [], [])
+            loaded = nx.read_graphml(output_dir / "base.graphml")
+            summary = json.loads((output_dir / "summary.json").read_text())
+        self.assertEqual(loaded.number_of_edges(), 1)
+        self.assertEqual(summary["nodes"], 2)
 
 
 if __name__ == "__main__":

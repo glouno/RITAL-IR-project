@@ -458,6 +458,25 @@ uv run python eval/import_openai_index_relation_batch.py \
 
 This writes parsed per-chunk relationships to `relation_extract_results.jsonl`.
 
+After entity and relation imports are available, assemble the flat base graph:
+
+```bash
+uv run python eval/assemble_openai_index_base_graph.py \
+  --entity-results .runs/openai_index_batch/agriculture_entity_extract_imported/entity_extract_results.jsonl \
+  --relation-results .runs/openai_index_batch/agriculture_relation_extract_imported/relation_extract_results.jsonl \
+  --output-dir .runs/openai_index_batch/agriculture_base_graph
+```
+
+Outputs:
+
+- `base_graph.graphml`
+- `merged_nodes.json`
+- `merged_edges.json`
+- `summary.json`
+- `summary.md`
+
+This base graph is the checkpoint between Batch extraction and the remaining HiRAG indexing stages. It is not yet a full queryable HiRAG working directory because it still needs entity embeddings/vector storage, hierarchical GMM summaries, Leiden clustering, and community reports.
+
 Graph construction cannot be a single monolithic batch because several stages depend on previous outputs:
 
 ```mermaid

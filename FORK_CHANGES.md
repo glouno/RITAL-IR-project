@@ -504,3 +504,33 @@ Relevant files:
 - [eval/export_openai_index_relation_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_index_relation_batch.py)
 - [eval/import_openai_index_relation_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_index_relation_batch.py)
 - [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)
+
+## OpenAI Batch Base Graph Assembly
+
+### 2026-05-05
+
+Added an offline assembly step for imported OpenAI Batch graph-indexing outputs.
+
+What changed:
+
+- Added `assemble_openai_index_base_graph.py`, which merges parsed entity and relation JSONL files into a base GraphML artifact.
+- The assembler deduplicates entity nodes, combines descriptions/source chunk IDs with `GRAPH_FIELD_SEP`, sums duplicate edge weights, and writes `merged_nodes.json`, `merged_edges.json`, `summary.json`, and `summary.md`.
+- Added tests for duplicate node/edge merging and GraphML output.
+
+Current scope:
+
+- This produces the flat base graph after entity and relation extraction.
+- It does not yet run hierarchical GMM summaries, Leiden clustering, community reports, or vector DB population.
+
+Smoke:
+
+- Assembled a synthetic two-node/one-edge graph into `.runs/openai_index_batch/base_graph_assemble_smoke/base_graph.graphml`.
+
+Validation:
+
+- `uv run pytest tests/test_openai_index_batch.py`
+
+Relevant files:
+
+- [eval/assemble_openai_index_base_graph.py](/home/paulbeglin/projects/RITAL-IR-project/eval/assemble_openai_index_base_graph.py)
+- [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)

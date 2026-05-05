@@ -32,7 +32,7 @@ DEFAULT_WORKING_DIR = (
     ".runs/2026-04-22-agri-resume2/graphs/"
     "benchmark_ultra_lean_run1_20260422_204326"
 )
-DEFAULT_VARIANTS = ["hi", "hi_weighted", "hi_minmax", "hi_rerank", "hi_rerank_weighted"]
+DEFAULT_VARIANTS = ["hi", "hi_weighted", "hi_minmax", "hi_minmax_budgeted", "hi_rerank", "hi_rerank_weighted"]
 STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "how",
     "in", "is", "it", "of", "on", "or", "that", "the", "to", "what", "why",
@@ -63,6 +63,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--local-rerank-top-n", type=int, default=100)
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--top-m", type=int, default=10)
+    parser.add_argument("--edge-embedding-cache-path", default=".runs/edge_embedding_cache")
+    parser.add_argument("--disable-edge-embedding-cache", action="store_true")
     return parser.parse_args()
 
 
@@ -116,6 +118,8 @@ def build_graph(args: argparse.Namespace) -> HiRAG:
         Path(args.fastembed_cache_path).mkdir(parents=True, exist_ok=True)
     if args.reranker_cache_path:
         Path(args.reranker_cache_path).mkdir(parents=True, exist_ok=True)
+    if args.edge_embedding_cache_path and not args.disable_edge_embedding_cache:
+        Path(args.edge_embedding_cache_path).mkdir(parents=True, exist_ok=True)
     runtime = {
         "embed_model": args.embed_model,
         "embed_dim": args.embed_dim,
@@ -138,6 +142,8 @@ def build_graph(args: argparse.Namespace) -> HiRAG:
         reranker_model=args.reranker_model,
         reranker_cache_path=args.reranker_cache_path or args.fastembed_cache_path,
         local_rerank_top_n=args.local_rerank_top_n,
+        edge_embedding_cache_path=args.edge_embedding_cache_path,
+        disable_edge_embedding_cache=args.disable_edge_embedding_cache,
     )
 
 
@@ -157,6 +163,8 @@ def write_summary(output_dir: Path, rows: list[dict[str, Any]]) -> None:
             "bridge_path_edges",
             "mean_edge_score",
             "max_edge_cost",
+            "bridge_budget_fallbacks",
+            "bridge_budget_stopped",
             "bridge_vs_local_recall",
             "bridge_vs_global_recall",
             "bridge_vs_query_overlap",
@@ -205,6 +213,8 @@ def main() -> None:
                     "bridge_path_edges": debug.get("bridge_path_edges", 0),
                     "mean_edge_score": debug.get("mean_edge_score"),
                     "max_edge_cost": debug.get("max_edge_cost"),
+                    "bridge_budget_fallbacks": debug.get("bridge_budget_fallbacks", 0),
+                    "bridge_budget_stopped": debug.get("bridge_budget_stopped", False),
                     **coverage,
                 }
                 rows.append(row)

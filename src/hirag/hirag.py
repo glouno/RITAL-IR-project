@@ -133,6 +133,8 @@ class HiRAG:
     reranker_model: str = "answerdotai/answerai-colbert-small-v1"
     reranker_cache_path: str | None = None
     local_rerank_top_n: int = 100
+    edge_embedding_cache_path: str = ".runs/edge_embedding_cache"
+    disable_edge_embedding_cache: bool = False
 
     # entity extraction
     entity_extraction_func: callable = extract_entities
@@ -253,6 +255,8 @@ class HiRAG:
         config["embedding_func"] = self.embedding_func
         config["reranker_model"] = self.reranker_model
         config["reranker_cache_path"] = self.reranker_cache_path
+        config["edge_embedding_cache_path"] = self.edge_embedding_cache_path
+        config["disable_edge_embedding_cache"] = self.disable_edge_embedding_cache
         return config
 
     def insert(self, string_or_strings):
@@ -268,6 +272,8 @@ class HiRAG:
             param.bridge_strategy = "query_weighted"
         elif param.mode == "hi_minmax":
             param.bridge_strategy = "minmax"
+        elif param.mode == "hi_minmax_budgeted":
+            param.bridge_strategy = "minmax_budgeted"
         elif param.mode == "hi_rerank":
             param.local_rerank_strategy = "fastembed_late_interaction"
         elif param.mode == "hi_rerank_weighted":
@@ -281,7 +287,7 @@ class HiRAG:
         param = self._resolve_query_param(param)
         if param.mode == "naive" and not self.enable_naive_rag:
             raise ValueError("enable_naive_rag is False, cannot query in naive mode")
-        if param.mode in {"hi", "hi_weighted", "hi_minmax", "hi_rerank", "hi_rerank_weighted"} and not self.enable_hierachical_mode:
+        if param.mode in {"hi", "hi_weighted", "hi_minmax", "hi_minmax_budgeted", "hi_rerank", "hi_rerank_weighted"} and not self.enable_hierachical_mode:
             raise ValueError(f"enable_hierachical_mode is False, cannot query in {param.mode} mode")
         if param.mode == "hi_nobridge" and not self.enable_hierachical_mode:
             raise ValueError("enable_hierachical_mode is False, cannot query in hierarchical_nobridge mode")
@@ -292,7 +298,7 @@ class HiRAG:
         if param.mode == "hi_global" and not self.enable_hierachical_mode:
             raise ValueError("enable_hierachical_mode is False, cannot query in hierarchical_global mode")
 
-        if param.mode in {"hi", "hi_weighted", "hi_minmax", "hi_rerank", "hi_rerank_weighted"}:  # retrieve with hierarchical knowledge
+        if param.mode in {"hi", "hi_weighted", "hi_minmax", "hi_minmax_budgeted", "hi_rerank", "hi_rerank_weighted"}:  # retrieve with hierarchical knowledge
             response = await hierarchical_query(
                 query,
                 self.chunk_entity_relation_graph,

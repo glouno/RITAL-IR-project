@@ -225,7 +225,7 @@ def create_vllm_chat_model(runtime: dict[str, Any]) -> Any:
         if requested_max_tokens is not None and model_max_context:
             # Keep a conservative buffer because local token estimation can differ
             # from server-side counting by a few hundred tokens on long prompts.
-            safety_buffer = 1024
+            safety_buffer = 2048
             prompt_tokens_estimate = sum(
                 len(token_encoder.encode(message["content"])) for message in messages
             )
@@ -340,6 +340,8 @@ def parse_args() -> argparse.Namespace:
     )
     default_reranker_cache_path = env_str("RERANKER_CACHE_PATH") or default_fastembed_cache_path
     default_local_rerank_top_n = env_int("LOCAL_RERANK_TOP_N", 100)
+    default_edge_embedding_cache_path = env_str("EDGE_EMBEDDING_CACHE_PATH", ".runs/edge_embedding_cache")
+    default_disable_edge_embedding_cache = env_bool("DISABLE_EDGE_EMBEDDING_CACHE", False)
     default_community_report_input_max_tokens = env_int(
         "COMMUNITY_REPORT_INPUT_MAX_TOKENS", 8192
     )
@@ -365,6 +367,7 @@ def parse_args() -> argparse.Namespace:
         "hi",
         "hi_weighted",
         "hi_minmax",
+        "hi_minmax_budgeted",
         "hi_rerank",
         "hi_rerank_weighted",
         "naive",
@@ -528,6 +531,18 @@ def parse_args() -> argparse.Namespace:
         help="Number of dense entity candidates reranked by experimental local reranking modes",
     )
     parser.add_argument(
+        "--edge-embedding-cache-path",
+        type=str,
+        default=default_edge_embedding_cache_path,
+        help="Disk cache path for query-weighted bridge edge embeddings",
+    )
+    parser.add_argument(
+        "--disable-edge-embedding-cache",
+        action="store_true",
+        default=default_disable_edge_embedding_cache,
+        help="Disable disk cache for query-weighted bridge edge embeddings",
+    )
+    parser.add_argument(
         "--disable-llm-cache",
         action="store_true",
         default=default_disable_llm_cache,
@@ -658,6 +673,8 @@ def build_graph_runtime(
         "fastembed_cache_path": args.fastembed_cache_path,
         "reranker_model": args.reranker_model,
         "reranker_cache_path": args.reranker_cache_path,
+        "edge_embedding_cache_path": args.edge_embedding_cache_path,
+        "disable_edge_embedding_cache": args.disable_edge_embedding_cache,
         "telemetry": telemetry,
         "benchmark_label": args.benchmark_label,
         "model_max_context": model_max_context,
@@ -689,6 +706,8 @@ def build_graph_runtime(
         reranker_model=args.reranker_model,
         reranker_cache_path=args.reranker_cache_path,
         local_rerank_top_n=args.local_rerank_top_n,
+        edge_embedding_cache_path=args.edge_embedding_cache_path,
+        disable_edge_embedding_cache=args.disable_edge_embedding_cache,
     )
     return graph_func, runtime
 

@@ -5,7 +5,9 @@ import tiktoken
 import networkx as nx
 import time
 import logging
+import hashlib
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Callable, Union
 from collections import Counter, defaultdict
 from ._splitter import SeparatorSplitter
@@ -105,7 +107,11 @@ def _late_interaction_score(query_embedding: Any, document_embedding: Any) -> fl
 
 _RERANKER_CACHE: dict[tuple[str, str | None], Any] = {}
 _RERANKER_FAILURES: set[tuple[str, str | None]] = set()
-_EDGE_EMBEDDING_CACHE: dict[tuple[int, int, int], dict[str, Any]] = {}
+_EDGE_EMBEDDING_CACHE: dict[tuple[Any, ...], dict[str, Any]] = {}
+
+
+def _hash_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def _reranker_cache_key(global_config: dict) -> tuple[str, str | None]:
@@ -1440,11 +1446,83 @@ def _edge_description_text(graph: nx.Graph, source: str, target: str, edge_data:
     )
 
 
+def _graph_cache_identity(graph: nx.Graph, knowledge_graph_inst: BaseGraphStorage) -> str:
+    graph_file = getattr(knowledge_graph_inst, "_graphml_xml_file", None)
+    if graph_file:
+        graph_path = Path(graph_file)
+        if graph_path.exists():
+            stat = graph_path.stat()
+            return _hash_text(
+                f"{graph_path.resolve()}:{stat.st_size}:{int(stat.st_mtime)}"
+            )
+    sample_edges = [
+        "->".join(_edge_key(str(source), str(target)))
+        for source, target in list(graph.edges())[:1000]
+    ]
+    return _hash_text(
+        json.dumps(
+            {
+                "nodes": graph.number_of_nodes(),
+                "edges": graph.number_of_edges(),
+                "sample": sorted(sample_edges),
+            },
+            sort_keys=True,
+        )
+    )
+
+
+def _edge_embedding_cache_file(
+    graph: nx.Graph,
+    knowledge_graph_inst: BaseGraphStorage,
+    global_config: dict,
+) -> Path | None:
+    if global_config.get("disable_edge_embedding_cache"):
+        return None
+    cache_root = global_config.get("edge_embedding_cache_path")
+    if not cache_root:
+        return None
+    embedding_func = global_config.get("embedding_func")
+    model = global_config.get("embed_model") or getattr(embedding_func, "__name__", "embedding")
+    dim = getattr(embedding_func, "embedding_dim", "unknown")
+    graph_id = _graph_cache_identity(graph, knowledge_graph_inst)
+    return Path(cache_root) / f"{graph_id}_{_hash_text(str(model))[:12]}_{dim}.json"
+
+
+def _load_edge_embedding_disk_cache(cache_file: Path | None) -> dict[str, Any]:
+    if cache_file is None:
+        return {"edge_embeddings": {}}
+    cache_file = Path(cache_file)
+    if not cache_file.exists():
+        return {"edge_embeddings": {}}
+    try:
+        data = json.loads(cache_file.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("Failed to load edge embedding cache %s: %s", cache_file, exc)
+        return {"edge_embeddings": {}}
+    if not isinstance(data, dict) or not isinstance(data.get("edge_embeddings"), dict):
+        return {"edge_embeddings": {}}
+    return data
+
+
+def _write_edge_embedding_disk_cache(cache_file: Path | None, data: dict[str, Any]) -> None:
+    if cache_file is None:
+        return
+    cache_file = Path(cache_file)
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        tmp_file = cache_file.with_suffix(cache_file.suffix + ".tmp")
+        tmp_file.write_text(json.dumps(data), encoding="utf-8")
+        tmp_file.replace(cache_file)
+    except Exception as exc:
+        logger.warning("Failed to write edge embedding cache %s: %s", cache_file, exc)
+
+
 async def _build_query_edge_costs(
     query: str,
     knowledge_graph_inst: BaseGraphStorage,
     query_param: QueryParam,
     embedding_func: Callable | None,
+    global_config: dict | None = None,
 ) -> dict[tuple[str, str], dict[str, float]]:
     graph = _networkx_graph_from_storage(knowledge_graph_inst)
     if graph is None or embedding_func is None:
@@ -1458,17 +1536,63 @@ async def _build_query_edge_costs(
         logger.warning("Query-weighted bridge query embedding failed: %s", exc)
         return {}
 
-    cache_key = (id(graph), graph.number_of_nodes(), graph.number_of_edges())
+    global_config = global_config or {}
+    cache_embedding_func = global_config.get("embedding_func") or embedding_func
+    cache_model = global_config.get("embed_model") or getattr(cache_embedding_func, "__name__", "embedding")
+    cache_dim = getattr(cache_embedding_func, "embedding_dim", "unknown")
+    cache_key = (
+        id(graph),
+        graph.number_of_nodes(),
+        graph.number_of_edges(),
+        str(cache_model),
+        str(cache_dim),
+    )
     if cache_key not in _EDGE_EMBEDDING_CACHE:
-        edge_texts = [
-            _edge_description_text(graph, source, target, data)
+        edge_texts = {
+            _edge_key(source, target): _edge_description_text(graph, source, target, data)
             for source, target, data in edges
+        }
+        disk_cache_file = _edge_embedding_cache_file(
+            graph, knowledge_graph_inst, global_config
+        )
+        disk_cache = _load_edge_embedding_disk_cache(disk_cache_file)
+        cached_embeddings = disk_cache.get("edge_embeddings", {})
+        edge_embeddings_by_key: dict[tuple[str, str], Any] = {}
+        missing_keys: list[tuple[str, str]] = []
+        missing_texts: list[str] = []
+        for edge_key, edge_text in edge_texts.items():
+            cache_item = cached_embeddings.get("|".join(edge_key))
+            text_hash = _hash_text(edge_text)
+            if (
+                isinstance(cache_item, dict)
+                and cache_item.get("text_hash") == text_hash
+                and "embedding" in cache_item
+            ):
+                edge_embeddings_by_key[edge_key] = cache_item["embedding"]
+            else:
+                missing_keys.append(edge_key)
+                missing_texts.append(edge_text)
+        if missing_texts:
+            try:
+                missing_embeddings = await embedding_func(missing_texts)
+            except Exception as exc:
+                logger.warning("Query-weighted bridge edge embedding failed: %s", exc)
+                return {}
+            for edge_key, edge_text, embedding in zip(missing_keys, missing_texts, missing_embeddings):
+                embedding_list = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
+                edge_embeddings_by_key[edge_key] = embedding_list
+                cached_embeddings["|".join(edge_key)] = {
+                    "text_hash": _hash_text(edge_text),
+                    "embedding": embedding_list,
+                }
+            disk_cache["edge_embeddings"] = cached_embeddings
+            disk_cache["graph_nodes"] = graph.number_of_nodes()
+            disk_cache["graph_edges"] = graph.number_of_edges()
+            _write_edge_embedding_disk_cache(disk_cache_file, disk_cache)
+        edge_embeddings = [
+            edge_embeddings_by_key[_edge_key(source, target)]
+            for source, target, _data in edges
         ]
-        try:
-            edge_embeddings = await embedding_func(edge_texts)
-        except Exception as exc:
-            logger.warning("Query-weighted bridge edge embedding failed: %s", exc)
-            return {}
         _EDGE_EMBEDDING_CACHE[cache_key] = {
             "edges": edges,
             "edge_embeddings": edge_embeddings,
@@ -1562,13 +1686,59 @@ def _minmax_path(
     return best_path
 
 
+def _minmax_budgeted_path(
+    graph: nx.Graph,
+    source: str,
+    target: str,
+    edge_costs: dict[tuple[str, str], dict[str, float]],
+    query_param: QueryParam,
+) -> tuple[list[str], str]:
+    thresholds = sorted({data["cost"] for data in edge_costs.values()})
+    max_nodes = max(2, query_param.bridge_max_path_edges + 1)
+    if thresholds:
+        best_path: list[str] | None = None
+        low = 0
+        high = len(thresholds) - 1
+        while low <= high:
+            mid = (low + high) // 2
+            threshold = thresholds[mid]
+            allowed_edges = [
+                (u, v)
+                for u, v in graph.edges()
+                if _weighted_edge_cost(edge_costs, u, v) <= threshold
+            ]
+            filtered = nx.Graph()
+            filtered.add_nodes_from(graph.nodes())
+            filtered.add_edges_from(allowed_edges)
+            try:
+                candidate = nx.shortest_path(filtered, source=source, target=target)
+                if len(candidate) <= max_nodes:
+                    best_path = candidate
+                    high = mid - 1
+                else:
+                    low = mid + 1
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                low = mid + 1
+        if best_path is not None:
+            return best_path, "minmax_budgeted"
+
+    if query_param.bridge_budget_fallback == "weighted":
+        try:
+            weighted = _weighted_dijkstra_path(graph, source, target, edge_costs)
+            if len(weighted) <= max_nodes:
+                return weighted, "weighted_fallback"
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            pass
+    return nx.shortest_path(graph, source=source, target=target), "unweighted_fallback"
+
+
 async def _path_between(
     knowledge_graph_inst: BaseGraphStorage,
     source: str,
     target: str,
     query_param: QueryParam,
     edge_costs: dict[tuple[str, str], dict[str, float]],
-) -> list[str]:
+) -> tuple[list[str], str]:
     from ._storage.gdb_neo4j import Neo4jStorage
 
     graph = _networkx_graph_from_storage(knowledge_graph_inst)
@@ -1578,19 +1748,25 @@ async def _path_between(
             and query_param.bridge_strategy == "query_weighted"
             and edge_costs
         ):
-            return _weighted_dijkstra_path(graph, source, target, edge_costs)
+            return _weighted_dijkstra_path(graph, source, target, edge_costs), "query_weighted"
         if (
             graph is not None
             and query_param.bridge_strategy == "minmax"
             and edge_costs
         ):
-            return _minmax_path(graph, source, target, edge_costs)
+            return _minmax_path(graph, source, target, edge_costs), "minmax"
+        if (
+            graph is not None
+            and query_param.bridge_strategy == "minmax_budgeted"
+            and edge_costs
+        ):
+            return _minmax_budgeted_path(graph, source, target, edge_costs, query_param)
         if isinstance(knowledge_graph_inst, Neo4jStorage):
-            return await knowledge_graph_inst.shortest_path(source, target)
+            return await knowledge_graph_inst.shortest_path(source, target), "unweighted"
         if graph is not None:
-            return nx.shortest_path(graph, source=source, target=target)
+            return nx.shortest_path(graph, source=source, target=target), "unweighted"
     except (nx.NetworkXNoPath, nx.NodeNotFound):
-        return []
+        return [], "no_path"
     except Exception as exc:
         logger.warning(
             "Bridge path strategy %s failed between %s and %s; falling back to unweighted path: %s",
@@ -1601,10 +1777,10 @@ async def _path_between(
         )
         if graph is not None:
             try:
-                return nx.shortest_path(graph, source=source, target=target)
+                return nx.shortest_path(graph, source=source, target=target), "unweighted_error_fallback"
             except (nx.NetworkXNoPath, nx.NodeNotFound):
-                return []
-    return []
+                return [], "no_path"
+    return [], "no_path"
 
 
 async def _find_path_with_required_nodes(
@@ -1612,14 +1788,40 @@ async def _find_path_with_required_nodes(
     key_entities: list[str],
     query_param: QueryParam,
     edge_costs: dict[tuple[str, str], dict[str, float]],
-) -> list[str]:
+) -> tuple[list[str], list[dict[str, Any]]]:
     key_entities = _ordered_unique(key_entities)
     if len(key_entities) < 2:
-        return key_entities
+        return key_entities, []
     final_path: list[str] = []
+    decisions: list[dict[str, Any]] = []
+    total_edges = 0
     for source, target in zip(key_entities, key_entities[1:]):
-        sub_path = await _path_between(
+        sub_path, decision = await _path_between(
             knowledge_graph_inst, source, target, query_param, edge_costs
+        )
+        sub_edges = max(0, len(sub_path) - 1)
+        if (
+            query_param.bridge_strategy == "minmax_budgeted"
+            and query_param.bridge_max_total_edges > 0
+            and total_edges + sub_edges > query_param.bridge_max_total_edges
+        ):
+            decisions.append(
+                {
+                    "source": source,
+                    "target": target,
+                    "decision": "budget_stop",
+                    "path_edges": sub_edges,
+                    "total_edges_before": total_edges,
+                }
+            )
+            break
+        decisions.append(
+            {
+                "source": source,
+                "target": target,
+                "decision": decision,
+                "path_edges": sub_edges,
+            }
         )
         if not sub_path:
             if not final_path or final_path[-1] != target:
@@ -1629,7 +1831,8 @@ async def _find_path_with_required_nodes(
             final_path.extend(sub_path[1:])
         else:
             final_path.extend(sub_path)
-    return final_path
+        total_edges = max(0, len(final_path) - 1)
+    return final_path, decisions
 
 
 def _select_key_entities(
@@ -1665,15 +1868,23 @@ async def _build_bridge_path_data(
 ) -> tuple[list[str], list[dict], dict[tuple[str, str], dict[str, float]]]:
     embedding_func = global_config.get("embedding_func")
     edge_costs: dict[tuple[str, str], dict[str, float]] = {}
-    if query_param.bridge_strategy in {"query_weighted", "minmax"}:
+    if query_param.bridge_strategy in {"query_weighted", "minmax", "minmax_budgeted"}:
         edge_costs = await _build_query_edge_costs(
-            query, knowledge_graph_inst, query_param, embedding_func
+            query, knowledge_graph_inst, query_param, embedding_func, global_config
         )
         if not edge_costs:
             query_param.debug_info["bridge_fallback"] = "unweighted"
-    path = await _find_path_with_required_nodes(
+    path, decisions = await _find_path_with_required_nodes(
         knowledge_graph_inst, key_entities, query_param, edge_costs
     )
+    if decisions:
+        query_param.debug_info["bridge_path_decisions"] = decisions
+        query_param.debug_info["bridge_budget_fallbacks"] = sum(
+            1 for item in decisions if "fallback" in item.get("decision", "")
+        )
+        query_param.debug_info["bridge_budget_stopped"] = any(
+            item.get("decision") == "budget_stop" for item in decisions
+        )
     if not path:
         return [], [], edge_costs
     path_datas_raw = await asyncio.gather(

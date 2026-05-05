@@ -15,6 +15,7 @@ class QueryParam:
         "hi",
         "hi_weighted",
         "hi_minmax",
+        "hi_minmax_budgeted",
         "hi_rerank",
         "hi_rerank_weighted",
     ] = "hi"
@@ -23,13 +24,17 @@ class QueryParam:
     level: int = 2
     top_k: int = 20         # retrieve top-k entities
     top_m: int = 10         # retrieve top-m entities in each retrieved community
-    bridge_strategy: Literal["unweighted", "query_weighted", "minmax"] = "unweighted"
+    bridge_strategy: Literal["unweighted", "query_weighted", "minmax", "minmax_budgeted"] = "unweighted"
     local_rerank_strategy: Literal["none", "fastembed_late_interaction"] = "none"
     local_candidate_multiplier: int = 10
     local_rerank_top_n: int = 100
     bridge_alpha: float = 1.0
     bridge_beta: float = 0.15
     bridge_gamma: float = 0.05
+    bridge_max_path_edges: int = 120
+    bridge_max_total_edges: int = 220
+    bridge_length_penalty: float = 0.02
+    bridge_budget_fallback: Literal["weighted", "unweighted"] = "weighted"
     # naive search
     naive_max_token_for_text_unit = 10000
     # hi search

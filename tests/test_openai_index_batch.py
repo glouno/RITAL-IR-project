@@ -14,6 +14,15 @@ from eval.import_openai_index_entity_batch import (
     load_metadata,
     parse_entities,
 )
+from eval.export_openai_index_relation_batch import (
+    build_relation_prompt,
+    entity_names_for_chunk,
+    request_body as relation_request_body,
+)
+from eval.import_openai_index_relation_batch import (
+    convert_rows as convert_relation_rows,
+    parse_relations,
+)
 from hirag.regimes import resolve_prompts
 
 
@@ -103,6 +112,99 @@ class OpenAIIndexBatchTests(unittest.TestCase):
             rows = convert_rows(output, load_metadata(metadata), resolve_prompts("ultra_lean"))
         self.assertEqual(rows[0]["chunk_id"], "chunk-1")
         self.assertEqual(rows[0]["entity_count"], 1)
+        self.assertIsNone(rows[0]["error"])
+
+    def test_relation_batch_request_uses_completion_tokens(self) -> None:
+        body = relation_request_body(
+            Namespace(
+                model="gpt-5.4-mini",
+                completion_token_param="max_completion_tokens",
+                temperature=None,
+            ),
+            "Extract relations",
+            384,
+        )
+        self.assertEqual(body["max_completion_tokens"], 384)
+        self.assertNotIn("max_tokens", body)
+
+    def test_relation_prompt_uses_imported_entities(self) -> None:
+        prompts = resolve_prompts("ultra_lean")
+        prompt = build_relation_prompt(
+            "Compost improves soil health.",
+            ['"COMPOST"', '"SOIL HEALTH"'],
+            prompts,
+        )
+        self.assertIn('"COMPOST","SOIL HEALTH"', prompt)
+        self.assertIn("Compost improves soil health.", prompt)
+
+    def test_entity_names_for_chunk_preserves_ordered_unique_names(self) -> None:
+        names = entity_names_for_chunk(
+            {
+                "entities": [
+                    {"entity_name": '"COMPOST"'},
+                    {"entity_name": '"SOIL HEALTH"'},
+                    {"entity_name": '"COMPOST"'},
+                ]
+            }
+        )
+        self.assertEqual(names, ['"COMPOST"', '"SOIL HEALTH"'])
+
+    def test_parse_relation_batch_output(self) -> None:
+        prompts = resolve_prompts("ultra_lean")
+        text = (
+            '("relationship"<|>"Compost"<|>"Soil Health"<|>"Compost improves soil health."<|>8)'
+            "<|COMPLETE|>"
+        )
+        relations = parse_relations(text, prompts, "chunk-1")
+        self.assertEqual(relations[0]["src_id"], '"COMPOST"')
+        self.assertEqual(relations[0]["tgt_id"], '"SOIL HEALTH"')
+        self.assertEqual(relations[0]["weight"], 8.0)
+
+    def test_convert_relation_batch_rows_with_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            metadata = tmp / "metadata.jsonl"
+            output = tmp / "output.jsonl"
+            metadata.write_text(
+                json.dumps(
+                    {
+                        "custom_id": "index_relation|chunk-1",
+                        "chunk_id": "chunk-1",
+                        "full_doc_id": "doc-1",
+                        "chunk_order_index": 0,
+                        "entity_count": 2,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            output.write_text(
+                json.dumps(
+                    {
+                        "custom_id": "index_relation|chunk-1",
+                        "response": {
+                            "status_code": 200,
+                            "body": {
+                                "choices": [
+                                    {
+                                        "message": {
+                                            "content": (
+                                                '("relationship"<|>"Compost"<|>"Soil Health"<|>"Compost improves soil health."<|>8)'
+                                                "<|COMPLETE|>"
+                                            )
+                                        }
+                                    }
+                                ]
+                            },
+                        },
+                        "error": None,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            rows = convert_relation_rows(output, load_metadata(metadata), resolve_prompts("ultra_lean"))
+        self.assertEqual(rows[0]["relation_count"], 1)
         self.assertIsNone(rows[0]["error"])
 
 

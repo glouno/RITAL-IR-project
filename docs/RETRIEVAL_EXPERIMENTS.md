@@ -434,6 +434,30 @@ uv run python eval/import_openai_index_entity_batch.py \
 
 This writes parsed per-chunk entities to `entity_extract_results.jsonl`.
 
+The next indexing Batch stage is relation extraction:
+
+```bash
+uv run python eval/export_openai_index_relation_batch.py \
+  --context-file eval/datasets/agriculture/agriculture_unique_contexts.json \
+  --entity-results .runs/openai_index_batch/agriculture_entity_extract_imported/entity_extract_results.jsonl \
+  --model gpt-5.4-mini \
+  --prompt-regime ultra_lean \
+  --output-dir .runs/openai_index_batch/agriculture_relation_extract \
+  --overwrite
+```
+
+After that Batch finishes:
+
+```bash
+uv run python eval/import_openai_index_relation_batch.py \
+  --batch-output path/to/relation_extract_batch_output.jsonl \
+  --metadata .runs/openai_index_batch/agriculture_relation_extract/relation_extract_metadata.jsonl \
+  --output-dir .runs/openai_index_batch/agriculture_relation_extract_imported \
+  --prompt-regime ultra_lean
+```
+
+This writes parsed per-chunk relationships to `relation_extract_results.jsonl`.
+
 Graph construction cannot be a single monolithic batch because several stages depend on previous outputs:
 
 ```mermaid

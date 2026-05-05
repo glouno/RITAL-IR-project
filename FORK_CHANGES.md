@@ -468,3 +468,39 @@ Relevant files:
 - [eval/export_openai_index_entity_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_index_entity_batch.py)
 - [eval/import_openai_index_entity_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_index_entity_batch.py)
 - [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)
+
+## OpenAI Batch Indexing Relation Stage
+
+### 2026-05-05
+
+Added the second reusable graph-construction Batch stage.
+
+What changed:
+
+- Added a relation-extraction Batch exporter that consumes imported per-chunk entity results.
+- Added a relation Batch importer/parser that converts OpenAI Batch output into parsed per-chunk relationships.
+- Added tests for relation prompt construction, request shape, ordered entity-name handling, and output parsing.
+
+Current indexing Batch chain:
+
+1. `export_openai_index_entity_batch.py`
+2. OpenAI Batch entity extraction
+3. `import_openai_index_entity_batch.py`
+4. `export_openai_index_relation_batch.py`
+5. OpenAI Batch relation extraction
+6. `import_openai_index_relation_batch.py`
+
+Smoke:
+
+- Exported 2 synthetic relation-extraction requests against real agriculture chunks using synthetic imported entities.
+- Local JSONL validation confirmed unique request IDs, `/v1/chat/completions`, `max_completion_tokens`, and no legacy `max_tokens`.
+
+Validation:
+
+- `uv run pytest tests/test_openai_index_batch.py`
+
+Relevant files:
+
+- [eval/export_openai_index_relation_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_index_relation_batch.py)
+- [eval/import_openai_index_relation_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_index_relation_batch.py)
+- [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)

@@ -73,6 +73,7 @@ def apply_regime(args: argparse.Namespace, regime: str) -> argparse.Namespace:
     copy.max_input_tokens = values["max_input_tokens"]
     copy.min_section_budget = 200
     copy.text_unit_snippet_chars = getattr(args, "text_unit_snippet_chars", 1200)
+    copy.text_unit_snippet_strategy = getattr(args, "text_unit_snippet_strategy", "query_overlap")
     return copy
 
 

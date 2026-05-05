@@ -1446,11 +1446,107 @@ def _edge_description_text(graph: nx.Graph, source: str, target: str, edge_data:
     )
 
 
-def _text_unit_context_content(text_unit: dict, query_param: QueryParam) -> str:
+_SNIPPET_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "how",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "their",
+    "to",
+    "what",
+    "when",
+    "where",
+    "which",
+    "with",
+}
+
+
+def _snippet_tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", text.lower())
+        if len(token) > 1 and token not in _SNIPPET_STOPWORDS
+    }
+
+
+def _query_overlap_snippet(content: str, query: str, snippet_chars: int) -> str:
+    query_tokens = _snippet_tokens(query)
+    if not query_tokens:
+        return content[:snippet_chars].rstrip()
+    if len(content) <= snippet_chars:
+        return content
+
+    pieces = [
+        piece.strip()
+        for piece in re.split(r"(?<=[.!?])\s+|\n+", content)
+        if piece.strip()
+    ]
+    if not pieces:
+        pieces = [
+            content[start : start + snippet_chars]
+            for start in range(0, len(content), max(1, snippet_chars // 2))
+        ]
+
+    best_text = ""
+    best_score: tuple[int, float, int] | None = None
+    window: list[str] = []
+    window_len = 0
+    for piece in pieces:
+        if len(piece) > snippet_chars:
+            sub_windows = [
+                piece[start : start + snippet_chars]
+                for start in range(0, len(piece), max(1, snippet_chars // 2))
+            ]
+            candidates = sub_windows
+        else:
+            candidates = [piece]
+        for candidate in candidates:
+            if len(candidate) > snippet_chars:
+                candidate = candidate[:snippet_chars]
+            while window and window_len + len(candidate) + 1 > snippet_chars:
+                removed = window.pop(0)
+                window_len -= len(removed) + 1
+            window.append(candidate)
+            window_len += len(candidate) + 1
+            current = " ".join(window).strip()
+            current_tokens = _snippet_tokens(current)
+            overlap = len(query_tokens & current_tokens)
+            density = overlap / max(1, len(current_tokens))
+            score = (overlap, density, -len(current))
+            if best_score is None or score > best_score:
+                best_score = score
+                best_text = current
+    if not best_text:
+        best_text = content[:snippet_chars]
+    return best_text[:snippet_chars].rstrip()
+
+
+def _text_unit_context_content(
+    text_unit: dict,
+    query_param: QueryParam,
+    query: str | None = None,
+) -> str:
     content = str(text_unit.get("content", ""))
     snippet_chars = query_param.text_unit_snippet_chars
     if snippet_chars is None or snippet_chars <= 0 or len(content) <= snippet_chars:
         return content
+    if query_param.text_unit_snippet_strategy == "query_overlap" and query:
+        return _query_overlap_snippet(content, query, snippet_chars) + " ..."
     return content[:snippet_chars].rstrip() + " ..."
 
 
@@ -1999,7 +2095,7 @@ async def _build_local_query_context(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param, query)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return f"""
 -----Reports-----
@@ -2206,7 +2302,7 @@ async def _build_hierarchical_query_context(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param, query)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
 
     # display reference info
@@ -2401,7 +2497,7 @@ async def _build_hibridge_query_context(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param, query)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return f"""
 -----Reasoning Path-----
@@ -2462,7 +2558,7 @@ async def _build_higlobal_query_context(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param, query)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return f"""
 -----Backgrounds-----
@@ -2543,7 +2639,7 @@ async def _build_hilocal_query_context(
     
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param, query)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
     return f"""
 -----Entities-----
@@ -2662,7 +2758,7 @@ async def _build_hierarchical_query_context_common(
 
     text_units_section_list = [["id", "content"]]
     for i, t in enumerate(use_text_units):
-        text_units_section_list.append([i, _text_unit_context_content(t, query_param)])
+        text_units_section_list.append([i, _text_unit_context_content(t, query_param, query)])
     text_units_context = list_of_list_to_csv(text_units_section_list)
 
     query_param.debug_info.update(

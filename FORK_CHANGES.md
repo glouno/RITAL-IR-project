@@ -381,3 +381,33 @@ Relevant files:
 - [eval/export_openai_judge_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_judge_batch_requests.py)
 - [eval/import_openai_batch_judgments.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_batch_judgments.py)
 - [eval/pairwise_answer_judge.py](/home/paulbeglin/projects/RITAL-IR-project/eval/pairwise_answer_judge.py)
+
+## Query-Aware Source Snippets
+
+### 2026-05-05
+
+Added a compact retrieval improvement for answer-eval and OpenAI Batch exports.
+
+What changed:
+
+- Added `QueryParam.text_unit_snippet_strategy` with `prefix` and `query_overlap` options.
+- Kept raw HiRAG behavior compatible by defaulting `QueryParam` to `prefix`.
+- Defaulted answer-eval/export contexts to `query_overlap`, so bounded source snippets are selected from the most query-overlapping sentence/window inside each retrieved chunk instead of always truncating from the chunk prefix.
+- Added focused unit coverage for query-overlap source snippet selection.
+
+Smoke observation:
+
+- On the first agriculture query with `hi`, query-overlap snippets reduced the exported answer prompt estimate from 4,403 to 3,799 input tokens while keeping source evidence from the same retrieved chunks.
+
+Validation:
+
+- `uv run pytest tests/test_hirag_retrieval_experiments.py tests/test_answer_level_evaluation.py`
+- `uv run python eval/export_openai_batch_requests.py --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 --query-file eval/datasets/agriculture/agriculture_query.jsonl --query-limit 1 --variants hi --model gpt-5.4-mini --output-dir .runs/openai_batch/dev_query_snippet_smoke --overwrite --include-contexts --text-unit-snippet-strategy query_overlap`
+- `uv run python eval/export_openai_batch_requests.py --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 --query-file eval/datasets/agriculture/agriculture_query.jsonl --query-limit 1 --variants hi --model gpt-5.4-mini --output-dir .runs/openai_batch/dev_prefix_snippet_smoke --overwrite --include-contexts --text-unit-snippet-strategy prefix`
+
+Relevant files:
+
+- [src/hirag/base.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/base.py)
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [eval/eval_utils.py](/home/paulbeglin/projects/RITAL-IR-project/eval/eval_utils.py)
+- [eval/retrieval_budget_sweep.py](/home/paulbeglin/projects/RITAL-IR-project/eval/retrieval_budget_sweep.py)

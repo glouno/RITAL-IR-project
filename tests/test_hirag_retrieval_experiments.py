@@ -132,6 +132,24 @@ class RetrievalExperimentTests(unittest.TestCase):
         )
         self.assertEqual(text, "abc ...")
 
+    def test_text_unit_query_overlap_snippet_prefers_relevant_window(self) -> None:
+        text = _text_unit_context_content(
+            {
+                "content": (
+                    "Generic introduction about farms. "
+                    "Irrigation scheduling and soil moisture sensors reduce water stress. "
+                    "Unrelated closing note."
+                )
+            },
+            QueryParam(
+                text_unit_snippet_chars=70,
+                text_unit_snippet_strategy="query_overlap",
+            ),
+            "How do soil moisture sensors help irrigation scheduling?",
+        )
+        self.assertIn("soil moisture sensors", text)
+        self.assertIn("irrigation", text.lower())
+
     def test_reranker_fallback_preserves_dense_order(self) -> None:
         nodes = [
             {"entity_name": "A", "description": "alpha", "dense_score": 0.9},

@@ -381,6 +381,48 @@ This writes the same files as local judging:
 - `judge_summary.csv`
 - `judge_summary.md`
 
+## Query-Aware Source Snippets
+
+Compact answer contexts now support two source-snippet strategies:
+
+- `prefix`: preserve the original behavior by taking the beginning of each source chunk.
+- `query_overlap`: choose the bounded sentence/window inside the chunk with the highest lexical overlap with the query.
+
+The raw `QueryParam` default remains `prefix`, but answer-eval and OpenAI Batch export defaults use `query_overlap` because they are explicitly budgeted generation contexts.
+
+Example:
+
+```bash
+uv run python eval/export_openai_batch_requests.py \
+  --working-dir .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326 \
+  --query-file eval/datasets/agriculture/agriculture_query.jsonl \
+  --query-limit 30 \
+  --variants hi hi_minmax_budgeted hi_rerank_weighted \
+  --model gpt-5.4-mini \
+  --output-dir .runs/openai_batch/agriculture_q30_gpt54_mini_v2 \
+  --include-contexts \
+  --text-unit-snippet-strategy query_overlap
+```
+
+Tiny smoke result on the first agriculture query:
+
+| Strategy | Variant | Estimated Input Tokens |
+|---|---|---:|
+| `prefix` | `hi` | 4,403 |
+| `query_overlap` | `hi` | 3,799 |
+
+This is not a quality result yet, but it is useful engineering signal: query-aware snippets can reduce answer prompt size while keeping source evidence from the same retrieved chunks.
+
+```mermaid
+flowchart LR
+    Q[Query] --> Tokens[Query tokens]
+    Chunk[Retrieved source chunk] --> Windows[Sentence/window candidates]
+    Tokens --> Score[Overlap scoring]
+    Windows --> Score
+    Score --> Snippet[Best bounded snippet]
+    Snippet --> Context[Answer context]
+```
+
 ## Budgeted Minmax And Edge Cache
 
 `hi_minmax_budgeted` keeps the same query-weighted edge costs as `hi_minmax`, then searches for paths that minimize the worst edge cost while respecting:

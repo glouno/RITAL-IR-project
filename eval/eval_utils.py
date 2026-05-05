@@ -124,6 +124,12 @@ def add_answer_context_args(parser: Any) -> None:
     parser.add_argument("--max-token-for-community-report", type=int, default=DEFAULT_CONTEXT_BUDGET)
     parser.add_argument("--max-token-for-text-unit", type=int, default=DEFAULT_TEXT_UNIT_BUDGET)
     parser.add_argument("--text-unit-snippet-chars", type=int, default=DEFAULT_TEXT_UNIT_SNIPPET_CHARS)
+    parser.add_argument(
+        "--text-unit-snippet-strategy",
+        choices=["prefix", "query_overlap"],
+        default="query_overlap",
+        help="How compact source snippets are selected for answer-eval contexts.",
+    )
 
 
 def make_query_param(
@@ -149,6 +155,7 @@ def make_query_param(
         max_token_for_community_report=scaled(args.max_token_for_community_report),
         max_token_for_text_unit=scaled(args.max_token_for_text_unit),
         text_unit_snippet_chars=args.text_unit_snippet_chars,
+        text_unit_snippet_strategy=args.text_unit_snippet_strategy,
     )
 
 

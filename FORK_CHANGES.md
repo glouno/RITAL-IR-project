@@ -534,3 +534,27 @@ Relevant files:
 
 - [eval/assemble_openai_index_base_graph.py](/home/paulbeglin/projects/RITAL-IR-project/eval/assemble_openai_index_base_graph.py)
 - [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)
+
+## Final Evaluation Batch Prep
+
+### 2026-05-10
+
+Prepared the final answer-level evaluation loop for the project presentation.
+
+What changed:
+
+- Fixed OpenAI Batch judge import summaries so imported rows with `latency_seconds: null` do not crash summary generation.
+- Imported the two successful agriculture answer Batch outputs into a complete q30 answer set:
+  - 30 queries
+  - `hi`, `hi_minmax_budgeted`, and `hi_rerank_weighted`
+  - 90 successful answers and no response errors
+- Imported the available partial agriculture judge Batch output and generated a missing-judge Batch request file for the remaining 74 comparisons.
+- Added a compact final-evaluation working summary under the curated agriculture artifact folder, including retrieval proxy metrics, answer token/cost metrics, partial judge win rates, and qualitative examples.
+- Generated GPT-5.4 Mini Mix judge request JSONL files from the existing Mix evaluation request files so Mix can be judged with the same current model family.
+- Brought `Fiche_Rendu_RI.pdf` onto the retrieval branch from the newer concise remote checkpoint.
+
+Relevant files:
+
+- [eval/pairwise_answer_judge.py](/home/paulbeglin/projects/RITAL-IR-project/eval/pairwise_answer_judge.py)
+- [artifacts/agriculture_graphs_2026-04-23/final_evaluation/summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/final_evaluation/summary.md)
+- [Fiche_Rendu_RI.pdf](/home/paulbeglin/projects/RITAL-IR-project/Fiche_Rendu_RI.pdf)

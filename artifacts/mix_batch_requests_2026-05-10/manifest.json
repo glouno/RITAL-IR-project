@@ -1,0 +1,22 @@
+{
+  "model": "gpt-5.4-mini",
+  "files": [
+    {
+      "source": "eval/datasets/mix/mix_eval.jsonl",
+      "batch_file": "artifacts/mix_batch_requests_2026-05-10/mix_eval_gpt54_mini.jsonl",
+      "request_count": 20
+    },
+    {
+      "source": "eval/datasets/mix/mix_eval_hi.jsonl",
+      "batch_file": "artifacts/mix_batch_requests_2026-05-10/mix_eval_hi_gpt54_mini.jsonl",
+      "request_count": 260
+    },
+    {
+      "source": "eval/datasets/mix/mix_eval_hi_naiveR_hi.jsonl",
+      "batch_file": "artifacts/mix_batch_requests_2026-05-10/mix_eval_hi_naiveR_hi_gpt54_mini.jsonl",
+      "request_count": 260
+    }
+  ],
+  "total_request_count": 540,
+  "upload_hint": "Upload a chosen JSONL with purpose='batch', then create a batch with endpoint='/v1/chat/completions' and completion_window='24h'."
+}

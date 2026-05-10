@@ -1,0 +1,3 @@
+variant_vs_hi,valid_comparisons,wins,losses,ties,win_rate
+hi_minmax_budgeted,20,9,11,0,0.45
+hi_rerank_weighted,26,15,11,0,0.5769230769230769

@@ -1,0 +1,16 @@
+{
+  "batch_file": ".runs/answer_eval/agriculture_q30_gpt54_mini_missing_judge_batch/judge_requests_missing.jsonl",
+  "metadata_file": ".runs/answer_eval/agriculture_q30_gpt54_mini_missing_judge_batch/judge_request_metadata_missing.jsonl",
+  "source_full_batch_dir": ".runs/answer_eval/agriculture_q30_gpt54_mini_full_judge_batch",
+  "existing_judge_output": "artifacts/agriculture_graphs_2026-04-23/OpenAI_batch_results/batch_69fb861e372c8190b705b03f1b6e5212_output.jsonl",
+  "model": "gpt-5.4-mini",
+  "request_count": 74,
+  "metadata_count": 74,
+  "excluded_existing_results": 46,
+  "baseline": "hi",
+  "variants": [
+    "hi_minmax_budgeted",
+    "hi_rerank_weighted"
+  ],
+  "upload_hint": "Upload with purpose='batch', then create a batch with endpoint='/v1/chat/completions' and completion_window='24h'."
+}

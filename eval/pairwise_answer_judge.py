@@ -216,6 +216,11 @@ def write_summary(output_dir: Path, rows: list[dict[str, Any]]) -> None:
         losses = sum(1 for item in valid if item.get("overall_winner") == item.get("variant_a"))
         ties = sum(1 for item in valid if item.get("overall_winner") == "Tie")
         total = len(valid)
+        latencies = [
+            item["latency_seconds"]
+            for item in valid
+            if isinstance(item.get("latency_seconds"), (int, float))
+        ]
         row = {
             "variant": variant,
             "valid_comparisons": total,
@@ -225,7 +230,7 @@ def write_summary(output_dir: Path, rows: list[dict[str, Any]]) -> None:
             "win_rate": wins / total if total else 0.0,
             "loss_rate": losses / total if total else 0.0,
             "tie_rate": ties / total if total else 0.0,
-            "mean_latency_seconds": statistics.mean([item["latency_seconds"] for item in valid]) if valid else 0.0,
+            "mean_latency_seconds": statistics.mean(latencies) if latencies else 0.0,
         }
         csv_rows.append(row)
         md.extend(

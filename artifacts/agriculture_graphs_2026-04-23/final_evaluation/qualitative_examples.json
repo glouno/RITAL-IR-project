@@ -1,0 +1,59 @@
+[
+  {
+    "query_id": "0",
+    "query": "What are the steps involved in extracting and handling honey, and why is it important to strain the honey after extraction?",
+    "variant": "hi_rerank_weighted",
+    "judge_orders": [
+      {
+        "answer_order": "baseline_first",
+        "overall_winner": "hi_rerank_weighted",
+        "explanation": "Answer 2 is stronger overall because it is more detailed, more informative, and more useful for understanding both the procedure and the purpose of straining."
+      },
+      {
+        "answer_order": "variant_first",
+        "overall_winner": "hi_rerank_weighted",
+        "explanation": "Answer 1 is stronger across all three criteria because it is more detailed, varied, and practically informative about both extracting and straining honey."
+      }
+    ],
+    "hi_answer_excerpt": "Extracting and handling honey generally involves removing it from the comb, collecting it, and then filtering out debris before storage or sale. The tables indicate that **extracted honey** is honey removed from the comb via extraction, and that tools such as **extractors** are used for this process. In beekeeping, extractors can come in different styles, including **radial** and **tangential** versions. For combs from top bar hives, the combs can also be placed in an extractor, and **wired foundation** is used in the process of extracted honey.\n\nAfter extraction, honey is typically **strained**. The tables list a **strainer** as a tool used to filter honey particles or remove debris from ho",
+    "variant_answer_excerpt": "## Extracting and handling honey\n\nThe process begins after the supers are removed from the hive and the honey has been brought under cover. In the source material, the frames are handled carefully so the comb is not damaged. One described method is to remove, reverse, and replace the frames, spin out the honey from the second side, then reverse and replace again to finish on the first side. Warming the supers for a day or so before extraction can also help the honey come out of the frames more easily and move through strainers faster.\n\nThe actual extraction is done with an **extractor**, which whirls the frames and removes the honey by **centrifugal force**. The texts also note that extracto"
+  },
+  {
+    "query_id": "0",
+    "query": "What are the steps involved in extracting and handling honey, and why is it important to strain the honey after extraction?",
+    "variant": "hi_minmax_budgeted",
+    "judge_orders": [
+      {
+        "answer_order": "baseline_first",
+        "overall_winner": "hi_minmax_budgeted",
+        "explanation": "Answer 2 is stronger across all three criteria because it gives more context, broader insight, and better practical understanding of why straining is important after extraction."
+      },
+      {
+        "answer_order": "variant_first",
+        "overall_winner": "hi_minmax_budgeted",
+        "explanation": "Answer 1 is the stronger overall response because it provides broader coverage and richer context, which better supports understanding the steps involved and why handling matters after extraction."
+      }
+    ],
+    "hi_answer_excerpt": "Extracting and handling honey generally involves removing it from the comb, collecting it, and then filtering out debris before storage or sale. The tables indicate that **extracted honey** is honey removed from the comb via extraction, and that tools such as **extractors** are used for this process. In beekeeping, extractors can come in different styles, including **radial** and **tangential** versions. For combs from top bar hives, the combs can also be placed in an extractor, and **wired foundation** is used in the process of extracted honey.\n\nAfter extraction, honey is typically **strained**. The tables list a **strainer** as a tool used to filter honey particles or remove debris from ho",
+    "variant_answer_excerpt": "Extracting and handling honey generally involves removing the honey from the comb, collecting it, and then filtering out unwanted material before storage or sale. The tables show that **extracted honey** is honey removed from the comb via extraction, and that equipment used in this process includes an **extractor**. In some cases, combs from a **top bar hive** can be placed in an extractor, and extracted honey is associated with **wired foundation** in the hive process.\n\nAfter extraction, the honey is commonly handled with **straining equipment**. The data lists a **strainer** as a tool used to filter honey particles and remove debris from honey. It also notes possible alternatives or additi"
+  },
+  {
+    "query_id": "29",
+    "query": "What are the primary motivations for people to grow their own vegetables according to the National Gardening Association?",
+    "variant": "hi_minmax_budgeted",
+    "judge_orders": [
+      {
+        "answer_order": "baseline_first",
+        "overall_winner": "hi_minmax_budgeted",
+        "explanation": "Answer 2 is the stronger response overall because it is clearer, more structured, and more directly focused on the primary motivations described by the National Gardening Association."
+      },
+      {
+        "answer_order": "variant_first",
+        "overall_winner": "hi",
+        "explanation": "Answer 2 is the stronger response because it is slightly more comprehensive, more varied, and more useful in explaining the motivations behind growing vegetables."
+      }
+    ],
+    "hi_answer_excerpt": "According to the provided source material, the main motivations for people to grow their own vegetables are practical and emotional. People are described as seeking “the reality of the possible” rather than “the theory of the desirable,” meaning they want something they can control in an uncertain world.\n\nA second major motivation is personal renewal and connection. The text says people find “respite and renewal” by cultivating gardens in their backyards, neighborhoods, communities, and region. It also notes a joy in connecting with the soil, plants, animals, the world, and other people around them.\n\nIn addition, the source mentions a philanthropic motive: some people grow vegetables through",
+    "variant_answer_excerpt": "According to the National Gardening Association material in the source document, people grow their own vegetables primarily for practical and emotional reasons. One main motivation is to take control of something they can manage themselves instead of despairing over larger systems beyond their control. The text contrasts “the reality of the possible” with “the theory of the desirable,” suggesting that gardening offers a concrete, hands-on way to respond to uncertainty.\n\nAnother major motivation is the sense of renewal and joy that comes from connecting with nature and community. The source says people find “respite and renewal” in gardening and report an internal spirit or joy in connecting "
+  }
+]

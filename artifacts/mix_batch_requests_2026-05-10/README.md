@@ -56,3 +56,17 @@ Fresh judge Batch requests:
 Submit the judge file to OpenAI Batch with endpoint `/v1/chat/completions` and
 `completion_window="24h"`. After the judge batch completes, import it with
 `eval/import_openai_batch_judgments.py`.
+
+Convenience launcher:
+
+```bash
+export OPENAI_API_KEY=...
+uv run python eval/run_openai_batch_file.py \
+  --batch-file artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_judge_requests/mix_q30_judge_gpt54_mini_from_batch_graph/judge_requests.jsonl \
+  --output-dir artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_judge_results/mix_q30_judge_gpt54_mini_from_batch_graph \
+  --description mix_q30_judge_gpt54_mini_from_batch_graph \
+  --poll-interval-seconds 120
+```
+
+This uploads the JSONL, creates the Batch, waits for a terminal status, and
+downloads output/error JSONL files.

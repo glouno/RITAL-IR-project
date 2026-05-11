@@ -633,3 +633,21 @@ Relevant files:
 
 - [artifacts/mix_batch_requests_2026-05-10/final_answer_import/mix_q30_answers_gpt54_mini_from_batch_graph/answers.jsonl](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/final_answer_import/mix_q30_answers_gpt54_mini_from_batch_graph/answers.jsonl)
 - [artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_judge_requests/mix_q30_judge_gpt54_mini_from_batch_graph/judge_requests.jsonl](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_judge_requests/mix_q30_judge_gpt54_mini_from_batch_graph/judge_requests.jsonl)
+
+### 2026-05-11 Batch Submission Helper
+
+Added a generic OpenAI Batch launcher for repo-generated JSONL files.
+
+What changed:
+
+- Added `run_openai_batch_file.py`.
+- The script validates JSONL row count, duplicate `custom_id`s, and per-file
+  Batch limits before upload.
+- It uploads with `purpose="batch"`, creates a Batch job, optionally polls until
+  completion, and downloads output/error files.
+- API keys are read only from `OPENAI_API_KEY`; keys should not be passed in
+  command arguments or chat.
+
+Relevant file:
+
+- [eval/run_openai_batch_file.py](/home/paulbeglin/projects/RITAL-IR-project/eval/run_openai_batch_file.py)

@@ -57,6 +57,18 @@ Submit the judge file to OpenAI Batch with endpoint `/v1/chat/completions` and
 `completion_window="24h"`. After the judge batch completes, import it with
 `eval/import_openai_batch_judgments.py`.
 
+Imported judge output:
+
+- `final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/judge_results.jsonl`
+- 120 judge rows imported successfully
+- 0 parse errors
+- Raw swapped-order win rates:
+  - `hi_minmax_budgeted`: 17 wins, 40 losses, 3 ties, win rate 28.3%
+  - `hi_rerank_weighted`: 33 wins, 27 losses, 0 ties, win rate 55.0%
+- Strict swapped-order agreement:
+  - `hi_minmax_budgeted`: 14/30 query pairs agree, strict variant win rate 6.7%
+  - `hi_rerank_weighted`: 21/30 query pairs agree, strict variant win rate 40.0%
+
 Convenience launcher:
 
 ```bash
@@ -70,3 +82,16 @@ uv run python eval/run_openai_batch_file.py \
 
 This uploads the JSONL, creates the Batch, waits for a terminal status, and
 downloads output/error JSONL files.
+
+For SSH persistence, launch the same command inside `screen`:
+
+```bash
+screen -dmS rital_mix_judge_batch_$(date +%Y%m%d_%H%M%S) bash -lc '
+cd /home/paulbeglin/projects/RITAL-IR-project &&
+uv run python eval/run_openai_batch_file.py \
+  --batch-file artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_judge_requests/mix_q30_judge_gpt54_mini_from_batch_graph/judge_requests.jsonl \
+  --output-dir artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_judge_results/mix_q30_judge_gpt54_mini_from_batch_graph \
+  --description mix_q30_judge_gpt54_mini_from_batch_graph \
+  --poll-interval-seconds 120
+'
+```

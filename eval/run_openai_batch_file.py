@@ -29,11 +29,33 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default=f".runs/openai_batch_submit/{timestamp}")
     parser.add_argument("--metadata", nargs="*", default=[])
     parser.add_argument("--description", default=None)
+    parser.add_argument(
+        "--env-file",
+        default=".env",
+        help="Optional dotenv-style file to load before reading OPENAI_API_KEY.",
+    )
     parser.add_argument("--poll-interval-seconds", type=int, default=60)
     parser.add_argument("--timeout-seconds", type=int, default=0, help="0 means no timeout")
     parser.add_argument("--no-wait", action="store_true")
+    parser.add_argument("--validate-only", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
+
+
+def load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, raw_line in enumerate(handle, start=1):
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if not key:
+                raise ValueError(f"{path}:{line_number}: empty environment key")
+            os.environ.setdefault(key, value)
 
 
 def parse_metadata(items: list[str], description: str | None) -> dict[str, str]:
@@ -122,8 +144,7 @@ def write_manifest(output_dir: Path, data: dict[str, Any]) -> None:
 
 def main() -> None:
     args = parse_args()
-    if not os.environ.get("OPENAI_API_KEY"):
-        raise RuntimeError("Set OPENAI_API_KEY in the environment; do not put API keys in command arguments.")
+    load_env_file(Path(args.env_file))
 
     batch_file = Path(args.batch_file)
     output_dir = Path(args.output_dir)
@@ -132,6 +153,13 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     file_stats = validate_batch_file(batch_file)
+    if args.validate_only:
+        print(json.dumps(file_stats, indent=2))
+        return
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        raise RuntimeError("Set OPENAI_API_KEY in the environment or .env; do not put API keys in command arguments.")
+
     metadata = parse_metadata(args.metadata, args.description)
     client = OpenAI()
 

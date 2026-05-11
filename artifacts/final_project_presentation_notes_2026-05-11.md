@@ -53,6 +53,11 @@ Mix is now ready for answer-level evaluation:
   reports.
 - Fresh q30 answer Batch file: 90 requests for `hi`, `hi_minmax_budgeted`, and
   `hi_rerank_weighted` with GPT-5.4 Mini.
+- Mix q30 judge results are now available:
+  - `hi_minmax_budgeted` vs `hi`: raw swapped-order win rate 28.3%.
+  - `hi_rerank_weighted` vs `hi`: raw swapped-order win rate 55.0%.
+  - Swapped-order agreement is much stronger for `hi_rerank_weighted` (70.0%)
+    than `hi_minmax_budgeted` (46.7%).
 
 ## Slide / Video Structure
 
@@ -68,9 +73,9 @@ Mix is now ready for answer-level evaluation:
 6. Results: agriculture retrieval proxy and partial judge win rates.
 7. Mix extension: larger cross-domain batch-indexed graph and q30 answer batch
    ready to submit.
-8. Honest limitations: full Mix judge numbers still require the answer batch
-   and judge batch to complete; Mix community reports are extractive rather
-   than LLM-written in the materialized workdir.
+8. Honest limitations: Mix community reports are extractive rather than
+   LLM-written in the materialized workdir, and judge swapped-order disagreement
+   means we should emphasize `hi_rerank_weighted` as the cleaner Mix signal.
 
 ## Next Submission Steps
 

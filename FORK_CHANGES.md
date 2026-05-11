@@ -645,9 +645,42 @@ What changed:
   Batch limits before upload.
 - It uploads with `purpose="batch"`, creates a Batch job, optionally polls until
   completion, and downloads output/error files.
-- API keys are read only from `OPENAI_API_KEY`; keys should not be passed in
-  command arguments or chat.
+- API keys are read from `OPENAI_API_KEY` after optionally loading `.env`; keys
+  should not be passed in command arguments or chat.
+- Added `OPENAI_API_KEY=` to `.env.example` and created an ignored local `.env`
+  placeholder for the active workspace.
 
 Relevant file:
 
 - [eval/run_openai_batch_file.py](/home/paulbeglin/projects/RITAL-IR-project/eval/run_openai_batch_file.py)
+
+### 2026-05-11 Mix Judge Import
+
+Imported the completed Mix q30 judge Batch output.
+
+What changed:
+
+- Imported 120 judge rows with 0 parse errors.
+- Added swapped-order agreement artifacts for interpreting judge reliability.
+- Updated final presentation notes with the Mix judge result.
+
+Raw swapped-order judge result:
+
+- `hi_minmax_budgeted` vs `hi`: 17 wins, 40 losses, 3 ties, win rate 28.3%.
+- `hi_rerank_weighted` vs `hi`: 33 wins, 27 losses, 0 ties, win rate 55.0%.
+
+Stricter swapped-order agreement:
+
+- `hi_minmax_budgeted`: 14/30 query pairs agreed, strict variant win rate 6.7%.
+- `hi_rerank_weighted`: 21/30 query pairs agreed, strict variant win rate 40.0%.
+
+Takeaway:
+
+- Mix supports the same practical story as agriculture: rerank-weighted retrieval
+  is the cleaner improvement signal, while the minmax-budgeted variant is more
+  brittle on this cross-domain graph.
+
+Relevant files:
+
+- [artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/judge_summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/judge_summary.md)
+- [artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/swapped_order_agreement.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/swapped_order_agreement.md)

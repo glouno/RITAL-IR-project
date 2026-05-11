@@ -1,0 +1,12 @@
+{
+  "graph_file": ".runs/openai_index_batch/mix_base_graph_gpt54_mini_final/base_graph.graphml",
+  "nodes": 17575,
+  "edges": 18588,
+  "entity_result_rows": 579,
+  "relation_result_rows": 579,
+  "entity_result_errors": 0,
+  "relation_result_errors": 0,
+  "parsed_entities": 23874,
+  "parsed_relations": 19676,
+  "unknown_nodes_added_from_relations": 119
+}

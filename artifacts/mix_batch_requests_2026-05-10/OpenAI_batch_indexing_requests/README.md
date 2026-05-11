@@ -12,6 +12,10 @@ The merged imported entity result is generated locally under `.runs/openai_index
 ## Relation Extraction
 
 - `mix_relation_extract_gpt54_mini_from_merged_entities_2048/`: 579-row relation extraction batch generated from the merged entity import, using `max_completion_tokens=2048`.
+- `mix_relation_extract_gpt54_mini_retry_4096/`: 71-row retry batch for rows from the 2048 relation run that ended with `finish_reason=length`, using `max_completion_tokens=4096`.
 
-Submit this relation batch next. After it completes, import it with `eval/import_openai_index_relation_batch.py`, then assemble the flat graph with `eval/assemble_openai_index_base_graph.py`.
+The final merged relation import is generated locally under `.runs/openai_index_batch/mix_relation_import_gpt54_mini_merged_retry/` by replacing the truncated 2048 rows with retry rows.
 
+The final flat relationship graph artifact is:
+
+- `artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_indexing_graphs/mix_base_graph_gpt54_mini_final/base_graph.graphml`

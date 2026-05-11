@@ -1,0 +1,16 @@
+{
+  "working_dir": ".runs/openai_index_batch/mix_hirag_workdir_gpt54_mini_final",
+  "docs": 61,
+  "chunks": 579,
+  "nodes": 17575,
+  "edges": 18588,
+  "clustered_nodes": 12572,
+  "community_reports": 2759,
+  "community_levels": {
+    "0": 88,
+    "1": 837,
+    "2": 1707,
+    "3": 127
+  },
+  "community_report_mode": "extractive_from_batch_graph"
+}

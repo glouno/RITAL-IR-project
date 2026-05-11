@@ -558,3 +558,44 @@ Relevant files:
 - [eval/pairwise_answer_judge.py](/home/paulbeglin/projects/RITAL-IR-project/eval/pairwise_answer_judge.py)
 - [artifacts/agriculture_graphs_2026-04-23/final_evaluation/summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/final_evaluation/summary.md)
 - [Fiche_Rendu_RI.pdf](/home/paulbeglin/projects/RITAL-IR-project/Fiche_Rendu_RI.pdf)
+
+## Mix Batch Graph To Answer Batch
+
+### 2026-05-11
+
+Materialized the GPT-5.4 Mini Mix Batch-indexed relationship graph into a
+queryable HiRAG workdir and exported fresh answer-generation requests.
+
+What changed:
+
+- Added `materialize_openai_index_hirag_workdir.py`, which rebuilds HiRAG's
+  local storage files from a Batch-assembled GraphML graph and the original
+  unique-context JSON.
+- The materializer regenerates full-doc and text-chunk KV stores, runs the
+  existing Leiden clustering, creates extractive community reports, and
+  populates FastEmbed entity/chunk vector stores.
+- Materialized the final Mix Batch graph into `.runs/openai_index_batch/mix_hirag_workdir_gpt54_mini_final`.
+- Exported 90 fresh GPT-5.4 Mini answer Batch requests for 30 Mix queries across
+  `hi`, `hi_minmax_budgeted`, and `hi_rerank_weighted`.
+- Added concise final-presentation notes covering the paper, weak points,
+  fork improvements, agriculture evidence, and the Mix evaluation handoff.
+
+Current Mix materialized graph:
+
+- 61 docs
+- 579 chunks
+- 17,575 graph nodes
+- 18,588 graph edges
+- 12,572 clustered nodes
+- 2,759 extractive community reports
+
+Validation:
+
+- `uv run python eval/materialize_openai_index_hirag_workdir.py --context-file eval/datasets/mix/mix_unique_contexts.json --graphml artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_indexing_graphs/mix_base_graph_gpt54_mini_final/base_graph.graphml --output-dir .runs/openai_index_batch/mix_hirag_workdir_gpt54_mini_final --overwrite --embedding-batch-num 64 --fastembed-cache-path .runs/fastembed_cache`
+- `uv run python eval/export_openai_batch_requests.py --working-dir .runs/openai_index_batch/mix_hirag_workdir_gpt54_mini_final --query-file eval/datasets/mix/mix.jsonl --query-limit 30 --variants hi hi_minmax_budgeted hi_rerank_weighted --model gpt-5.4-mini --output-dir artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_answer_requests/mix_q30_answers_gpt54_mini_from_batch_graph --include-contexts --answer-max-tokens 512 --completion-token-param max_completion_tokens`
+
+Relevant files:
+
+- [eval/materialize_openai_index_hirag_workdir.py](/home/paulbeglin/projects/RITAL-IR-project/eval/materialize_openai_index_hirag_workdir.py)
+- [artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_answer_requests/mix_q30_answers_gpt54_mini_from_batch_graph/manifest.json](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_answer_requests/mix_q30_answers_gpt54_mini_from_batch_graph/manifest.json)
+- [artifacts/final_project_presentation_notes_2026-05-11.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/final_project_presentation_notes_2026-05-11.md)

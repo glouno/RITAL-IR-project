@@ -41,7 +41,18 @@ Fresh answer-generation Batch requests:
 - 90 requests: 30 Mix queries x `hi`, `hi_minmax_budgeted`, `hi_rerank_weighted`
 - model: `gpt-5.4-mini`
 
-Submit the answer file to OpenAI Batch with endpoint `/v1/chat/completions` and
-`completion_window="24h"`. After the answer batch completes, import it with
-`eval/import_openai_batch_answers.py`, then generate the pairwise judge batch
-with `eval/export_openai_judge_batch_requests.py`.
+Imported answer-generation output:
+
+- `final_answer_import/mix_q30_answers_gpt54_mini_from_batch_graph/answers.jsonl`
+- 90 answers imported successfully
+- 0 answer errors
+
+Fresh judge Batch requests:
+
+- `OpenAI_batch_judge_requests/mix_q30_judge_gpt54_mini_from_batch_graph/judge_requests.jsonl`
+- 120 requests: 30 queries x 2 comparisons x 2 swapped answer orders
+- model: `gpt-5.4-mini`
+
+Submit the judge file to OpenAI Batch with endpoint `/v1/chat/completions` and
+`completion_window="24h"`. After the judge batch completes, import it with
+`eval/import_openai_batch_judgments.py`.

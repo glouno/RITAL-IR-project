@@ -599,3 +599,37 @@ Relevant files:
 - [eval/materialize_openai_index_hirag_workdir.py](/home/paulbeglin/projects/RITAL-IR-project/eval/materialize_openai_index_hirag_workdir.py)
 - [artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_answer_requests/mix_q30_answers_gpt54_mini_from_batch_graph/manifest.json](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_answer_requests/mix_q30_answers_gpt54_mini_from_batch_graph/manifest.json)
 - [artifacts/final_project_presentation_notes_2026-05-11.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/final_project_presentation_notes_2026-05-11.md)
+
+### 2026-05-11 Mix Answer Batch Import
+
+Imported the completed Mix q30 answer-generation Batch output and generated the
+actual judge Batch requests.
+
+What changed:
+
+- Imported 90 GPT-5.4 Mini Mix answers with 0 errors.
+- Generated 120 pairwise judge requests:
+  - 30 queries
+  - `hi_minmax_budgeted` vs `hi`
+  - `hi_rerank_weighted` vs `hi`
+  - two swapped answer orders per comparison
+
+Answer-batch usage:
+
+- `hi`: 108,851 total tokens
+- `hi_minmax_budgeted`: 115,361 total tokens
+- `hi_rerank_weighted`: 103,187 total tokens
+
+Notable retrieval/cost signal:
+
+- `hi_rerank_weighted` used the smallest answer prompt budget on Mix
+  (mean context input tokens 3,255.9) and fewer bridge edges on average.
+- `hi_minmax_budgeted` used the largest answer prompt budget
+  (mean context input tokens 3,692.1) and more bridge edges on average.
+- Judge results are still pending; the answer batch is complete, but the judge
+  batch still needs to be submitted and imported.
+
+Relevant files:
+
+- [artifacts/mix_batch_requests_2026-05-10/final_answer_import/mix_q30_answers_gpt54_mini_from_batch_graph/answers.jsonl](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/final_answer_import/mix_q30_answers_gpt54_mini_from_batch_graph/answers.jsonl)
+- [artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_judge_requests/mix_q30_judge_gpt54_mini_from_batch_graph/judge_requests.jsonl](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_judge_requests/mix_q30_judge_gpt54_mini_from_batch_graph/judge_requests.jsonl)

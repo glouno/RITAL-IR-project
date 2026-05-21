@@ -1,0 +1,230 @@
+2026-05-05 10:30:08,250 - HTTP Request: GET http://127.0.0.1:8000/v1/models "HTTP/1.1 200 OK"
+2026-05-05 10:30:08,347 - Load KV full_docs with 12 data
+2026-05-05 10:30:08,368 - Load KV text_chunks with 1756 data
+2026-05-05 10:30:08,409 - Load KV community_reports with 2282 data
+2026-05-05 10:30:08,830 - Loaded graph from .runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326/graph_chunk_entity_relation.graphml with 13179 nodes, 15604 edges
+2026-05-05 10:30:08,924 - Load (13062, 384) data
+2026-05-05 10:30:08,927 - Init {'embedding_dim': 384, 'metric': 'cosine', 'storage_file': '.runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326/vdb_entities.json'} 13062 data
+2026-05-05 10:30:08,932 - Load (1756, 384) data
+2026-05-05 10:30:08,933 - Init {'embedding_dim': 384, 'metric': 'cosine', 'storage_file': '.runs/2026-04-22-agri-resume2/graphs/benchmark_ultra_lean_run1_20260422_204326/vdb_chunks.json'} 1756 data
+/home/paulbeglin/projects/RITAL-IR-project/main.py:166: UserWarning: The model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 now uses mean pooling instead of CLS embedding. In order to preserve the previous behaviour, consider either pinning fastembed version to 0.5.1 or using `add_custom_model` functionality.
+  fastembed_model = fastembed_module.TextEmbedding(**kwargs)
+2026-05-05 10:30:09,740 - Using 20 entites, 20 communities, 119 reasoning path items, 2 text units
+2026-05-05 10:30:09,741 - ====== References ======:
+Entities (20): ['"EXTRACTED HONEY"', '"EXTRACTORS"', '"INDUSTRIAL MODEL OF BEEKEEPING"', '"SIEVE"', '"SOURWOOD HONEY"', '"SCREEN"', '"REFRACTOMETER"', '"PACKAGES"', '"CHUNK HONEY"', '"MESH MATERIAL"', '"ORGANIC HONEY STANDARDS"', '"STRAINER"', '"TUPELO HONEY"', '"RADIAL EXTRACTOR"', '"CONVENTIONAL APICULTURE"', '"PROGRAM (NOP)"', '"USDA-ARS HONEY BEE RESEARCH LABORATORY"', '"COMB FOUNDATION"', '"MELISSOPALYNOLOGY"', '"EXTRACTING MACHINES"']
+
+Communities (level, cluster_id) (20): [(0, 'Cluster 2'), (1, 'Cluster 85'), (1, 'Cluster 92'), (1, 'Cluster 83'), (2, 'Cluster 634'), (2, 'Cluster 682'), (0, 'Cluster 7'), (2, 'Cluster 651'), (1, 'Cluster 77'), (2, 'Cluster 607'), (2, 'Cluster 646'), (2, 'Cluster 683'), (1, 'Cluster 145'), (2, 'Cluster 849'), (1, 'Cluster 141'), (2, 'Cluster 845'), (0, 'Cluster 6'), (1, 'Cluster 126'), (2, 'Cluster 754'), (2, 'Cluster 649')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-0076674de6b44ebc3375b02ddb3d6d5c', 50), ('doc-0076674de6b44ebc3375b02ddb3d6d5c', 67)]
+
+2026-05-05 10:30:09,741 - [94m[Retrieval Time: 0.807453 seconds][0m
+2026-05-05 10:31:27,073 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:31:28,427 - Using 20 entites, 20 communities, 134 reasoning path items, 2 text units
+2026-05-05 10:31:28,427 - ====== References ======:
+Entities (20): ['"EXTRACTED HONEY"', '"EXTRACTORS"', '"INDUSTRIAL MODEL OF BEEKEEPING"', '"SIEVE"', '"SOURWOOD HONEY"', '"SCREEN"', '"REFRACTOMETER"', '"PACKAGES"', '"CHUNK HONEY"', '"MESH MATERIAL"', '"ORGANIC HONEY STANDARDS"', '"STRAINER"', '"TUPELO HONEY"', '"RADIAL EXTRACTOR"', '"CONVENTIONAL APICULTURE"', '"PROGRAM (NOP)"', '"USDA-ARS HONEY BEE RESEARCH LABORATORY"', '"COMB FOUNDATION"', '"MELISSOPALYNOLOGY"', '"EXTRACTING MACHINES"']
+
+Communities (level, cluster_id) (20): [(0, 'Cluster 2'), (1, 'Cluster 85'), (1, 'Cluster 92'), (1, 'Cluster 83'), (2, 'Cluster 634'), (2, 'Cluster 682'), (0, 'Cluster 7'), (2, 'Cluster 651'), (1, 'Cluster 77'), (2, 'Cluster 607'), (2, 'Cluster 646'), (2, 'Cluster 683'), (1, 'Cluster 145'), (2, 'Cluster 849'), (1, 'Cluster 141'), (2, 'Cluster 845'), (0, 'Cluster 6'), (1, 'Cluster 126'), (2, 'Cluster 754'), (2, 'Cluster 649')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-0076674de6b44ebc3375b02ddb3d6d5c', 50), ('doc-0076674de6b44ebc3375b02ddb3d6d5c', 67)]
+
+2026-05-05 10:31:28,428 - [94m[Retrieval Time: 1.349432 seconds][0m
+2026-05-05 10:32:26,473 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:32:35,099 - Using 20 entites, 20 communities, 164 reasoning path items, 2 text units
+2026-05-05 10:32:35,100 - ====== References ======:
+Entities (20): ['"EXTRACTED HONEY"', '"EXTRACTORS"', '"INDUSTRIAL MODEL OF BEEKEEPING"', '"SIEVE"', '"SOURWOOD HONEY"', '"SCREEN"', '"REFRACTOMETER"', '"PACKAGES"', '"CHUNK HONEY"', '"MESH MATERIAL"', '"ORGANIC HONEY STANDARDS"', '"STRAINER"', '"TUPELO HONEY"', '"RADIAL EXTRACTOR"', '"CONVENTIONAL APICULTURE"', '"PROGRAM (NOP)"', '"USDA-ARS HONEY BEE RESEARCH LABORATORY"', '"COMB FOUNDATION"', '"MELISSOPALYNOLOGY"', '"EXTRACTING MACHINES"']
+
+Communities (level, cluster_id) (20): [(0, 'Cluster 2'), (1, 'Cluster 85'), (1, 'Cluster 92'), (1, 'Cluster 83'), (2, 'Cluster 634'), (2, 'Cluster 682'), (0, 'Cluster 7'), (2, 'Cluster 651'), (1, 'Cluster 77'), (2, 'Cluster 607'), (2, 'Cluster 646'), (2, 'Cluster 683'), (1, 'Cluster 145'), (2, 'Cluster 849'), (1, 'Cluster 141'), (2, 'Cluster 845'), (0, 'Cluster 6'), (1, 'Cluster 126'), (2, 'Cluster 754'), (2, 'Cluster 649')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-0076674de6b44ebc3375b02ddb3d6d5c', 50), ('doc-0076674de6b44ebc3375b02ddb3d6d5c', 67)]
+
+2026-05-05 10:32:35,101 - [94m[Retrieval Time: 8.626826 seconds][0m
+2026-05-05 10:32:35,130 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-05-05 10:32:42,712 - Using 20 entites, 20 communities, 99 reasoning path items, 2 text units
+2026-05-05 10:32:42,712 - ====== References ======:
+Entities (20): ['"EXTRACTED HONEY"', '"EXTRACTORS"', '"INDUSTRIAL MODEL OF BEEKEEPING"', '"SIEVE"', '"SOURWOOD HONEY"', '"SCREEN"', '"REFRACTOMETER"', '"PACKAGES"', '"CHUNK HONEY"', '"MESH MATERIAL"', '"ORGANIC HONEY STANDARDS"', '"STRAINER"', '"TUPELO HONEY"', '"RADIAL EXTRACTOR"', '"CONVENTIONAL APICULTURE"', '"PROGRAM (NOP)"', '"USDA-ARS HONEY BEE RESEARCH LABORATORY"', '"COMB FOUNDATION"', '"MELISSOPALYNOLOGY"', '"EXTRACTING MACHINES"']
+
+Communities (level, cluster_id) (20): [(0, 'Cluster 2'), (1, 'Cluster 85'), (1, 'Cluster 92'), (1, 'Cluster 83'), (2, 'Cluster 634'), (2, 'Cluster 682'), (0, 'Cluster 7'), (2, 'Cluster 651'), (1, 'Cluster 77'), (2, 'Cluster 607'), (2, 'Cluster 646'), (2, 'Cluster 683'), (1, 'Cluster 145'), (2, 'Cluster 849'), (1, 'Cluster 141'), (2, 'Cluster 845'), (0, 'Cluster 6'), (1, 'Cluster 126'), (2, 'Cluster 754'), (2, 'Cluster 649')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-0076674de6b44ebc3375b02ddb3d6d5c', 50), ('doc-0076674de6b44ebc3375b02ddb3d6d5c', 67)]
+
+2026-05-05 10:32:42,714 - [94m[Retrieval Time: 7.583460 seconds][0m
+2026-05-05 10:33:50,675 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:33:51,836 - Using 20 entites, 15 communities, 66 reasoning path items, 2 text units
+2026-05-05 10:33:51,837 - ====== References ======:
+Entities (20): ['"EXTRACTOR"', '"HONEY EXTRACTOR"', '"RADIAL EXTRACTOR"', '"TANGENTIAL STYLE"', '"EXTRACTORS"', '"EXTRACTED HONEY"', '"HONEY HOUSE"', '"EXTRACTING MACHINES"', '"STRAINER"', '"COMB HONEY"', '"COLANDER"', '"MESH MATERIAL"', '"SIEVE"', '"SETTLING TANKS"', '"INDUSTRIAL MODEL OF BEEKEEPING"', '"REFRACTOMETER"', '"FRANCESCO DE HRUSCHKA"', '"SCREEN"', '"DOUBLE BOILER"', '"ORGANIC HONEY"']
+
+Communities (level, cluster_id) (15): [(0, 'Cluster 2'), (1, 'Cluster 92'), (2, 'Cluster 683'), (1, 'Cluster 77'), (1, 'Cluster 85'), (2, 'Cluster 682'), (2, 'Cluster 611'), (1, 'Cluster 83'), (2, 'Cluster 634'), (2, 'Cluster 651'), (2, 'Cluster 649'), (2, 'Cluster 607'), (2, 'Cluster 646'), (1, 'Cluster 80'), (2, 'Cluster 620')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-0076674de6b44ebc3375b02ddb3d6d5c', 49), ('doc-0076674de6b44ebc3375b02ddb3d6d5c', 47)]
+
+2026-05-05 10:33:51,838 - [94m[Retrieval Time: 1.161537 seconds][0m
+2026-05-05 10:35:17,853 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:35:17,894 - Using 20 entites, 17 communities, 106 reasoning path items, 2 text units
+2026-05-05 10:35:17,895 - ====== References ======:
+Entities (20): ['"BIGGEST LITTLE FARM IN AMERICA"', '"PEREGRINE FARM"', '"TRUCK FARM"', '"NATIONAL SMALL FARM COMMISSION"', '"STARTING & RUNNING YOUR OWN SMALL FARM BUSINESS"', '"FAMILY & SMALL FARMS"', '"CAROL EKARIUS"', '"HOME-GROWN WISCONSIN"', '"TWO-WHEEL WALK-BEHIND TRACTORS"', '"WILD THYME FARM"', '"NEW ENGLAND SMALL FARM INSTITUTE"', '"NEW HARVEST FARM"', '"FAIRPLAIN FARM"', '"CREEKSTONE FARMS"', '"APPLACHIAN SUSTAINABLE DEVELOPMENT"', '"DAKOTA LAKES FARM"', '"SOMEDAY FARM"', '"PETERSON\'S ORCHARD"', '"SARAH BETH AUBREY"', '"FAIRMEADOW FARM"']
+
+Communities (level, cluster_id) (17): [(0, 'Cluster 24'), (1, 'Cluster 307'), (0, 'Cluster 6'), (1, 'Cluster 136'), (2, 'Cluster 1236'), (0, 'Cluster 9'), (1, 'Cluster 164'), (2, 'Cluster 911'), (2, 'Cluster 809'), (2, 'Cluster 1230'), (2, 'Cluster 810'), (0, 'Cluster 23'), (1, 'Cluster 292'), (2, 'Cluster 1188'), (0, 'Cluster 11'), (1, 'Cluster 187'), (2, 'Cluster 957')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-3863cf622de51edc8bf820a98bb7bed2', 4), ('doc-3879a69225bb361e837b309119778934', 7)]
+
+2026-05-05 10:35:17,895 - [94m[Retrieval Time: 0.040116 seconds][0m
+2026-05-05 10:36:09,989 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:36:10,370 - Using 20 entites, 17 communities, 108 reasoning path items, 2 text units
+2026-05-05 10:36:10,370 - ====== References ======:
+Entities (20): ['"BIGGEST LITTLE FARM IN AMERICA"', '"PEREGRINE FARM"', '"TRUCK FARM"', '"NATIONAL SMALL FARM COMMISSION"', '"STARTING & RUNNING YOUR OWN SMALL FARM BUSINESS"', '"FAMILY & SMALL FARMS"', '"CAROL EKARIUS"', '"HOME-GROWN WISCONSIN"', '"TWO-WHEEL WALK-BEHIND TRACTORS"', '"WILD THYME FARM"', '"NEW ENGLAND SMALL FARM INSTITUTE"', '"NEW HARVEST FARM"', '"FAIRPLAIN FARM"', '"CREEKSTONE FARMS"', '"APPLACHIAN SUSTAINABLE DEVELOPMENT"', '"DAKOTA LAKES FARM"', '"SOMEDAY FARM"', '"PETERSON\'S ORCHARD"', '"SARAH BETH AUBREY"', '"FAIRMEADOW FARM"']
+
+Communities (level, cluster_id) (17): [(0, 'Cluster 24'), (1, 'Cluster 307'), (0, 'Cluster 6'), (1, 'Cluster 136'), (2, 'Cluster 1236'), (0, 'Cluster 9'), (1, 'Cluster 164'), (2, 'Cluster 911'), (2, 'Cluster 809'), (2, 'Cluster 1230'), (2, 'Cluster 810'), (0, 'Cluster 23'), (1, 'Cluster 292'), (2, 'Cluster 1188'), (0, 'Cluster 11'), (1, 'Cluster 187'), (2, 'Cluster 957')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-3863cf622de51edc8bf820a98bb7bed2', 4), ('doc-3879a69225bb361e837b309119778934', 7)]
+
+2026-05-05 10:36:10,371 - [94m[Retrieval Time: 0.380765 seconds][0m
+2026-05-05 10:37:06,824 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:37:13,154 - Using 20 entites, 17 communities, 190 reasoning path items, 2 text units
+2026-05-05 10:37:13,154 - ====== References ======:
+Entities (20): ['"BIGGEST LITTLE FARM IN AMERICA"', '"PEREGRINE FARM"', '"TRUCK FARM"', '"NATIONAL SMALL FARM COMMISSION"', '"STARTING & RUNNING YOUR OWN SMALL FARM BUSINESS"', '"FAMILY & SMALL FARMS"', '"CAROL EKARIUS"', '"HOME-GROWN WISCONSIN"', '"TWO-WHEEL WALK-BEHIND TRACTORS"', '"WILD THYME FARM"', '"NEW ENGLAND SMALL FARM INSTITUTE"', '"NEW HARVEST FARM"', '"FAIRPLAIN FARM"', '"CREEKSTONE FARMS"', '"APPLACHIAN SUSTAINABLE DEVELOPMENT"', '"DAKOTA LAKES FARM"', '"SOMEDAY FARM"', '"PETERSON\'S ORCHARD"', '"SARAH BETH AUBREY"', '"FAIRMEADOW FARM"']
+
+Communities (level, cluster_id) (17): [(0, 'Cluster 24'), (1, 'Cluster 307'), (0, 'Cluster 6'), (1, 'Cluster 136'), (2, 'Cluster 1236'), (0, 'Cluster 9'), (1, 'Cluster 164'), (2, 'Cluster 911'), (2, 'Cluster 809'), (2, 'Cluster 1230'), (2, 'Cluster 810'), (0, 'Cluster 23'), (1, 'Cluster 292'), (2, 'Cluster 1188'), (0, 'Cluster 11'), (1, 'Cluster 187'), (2, 'Cluster 957')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-3863cf622de51edc8bf820a98bb7bed2', 4), ('doc-3879a69225bb361e837b309119778934', 7)]
+
+2026-05-05 10:37:13,156 - [94m[Retrieval Time: 6.330236 seconds][0m
+2026-05-05 10:37:13,187 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-05-05 10:37:19,579 - Using 20 entites, 17 communities, 190 reasoning path items, 2 text units
+2026-05-05 10:37:19,580 - ====== References ======:
+Entities (20): ['"BIGGEST LITTLE FARM IN AMERICA"', '"PEREGRINE FARM"', '"TRUCK FARM"', '"NATIONAL SMALL FARM COMMISSION"', '"STARTING & RUNNING YOUR OWN SMALL FARM BUSINESS"', '"FAMILY & SMALL FARMS"', '"CAROL EKARIUS"', '"HOME-GROWN WISCONSIN"', '"TWO-WHEEL WALK-BEHIND TRACTORS"', '"WILD THYME FARM"', '"NEW ENGLAND SMALL FARM INSTITUTE"', '"NEW HARVEST FARM"', '"FAIRPLAIN FARM"', '"CREEKSTONE FARMS"', '"APPLACHIAN SUSTAINABLE DEVELOPMENT"', '"DAKOTA LAKES FARM"', '"SOMEDAY FARM"', '"PETERSON\'S ORCHARD"', '"SARAH BETH AUBREY"', '"FAIRMEADOW FARM"']
+
+Communities (level, cluster_id) (17): [(0, 'Cluster 24'), (1, 'Cluster 307'), (0, 'Cluster 6'), (1, 'Cluster 136'), (2, 'Cluster 1236'), (0, 'Cluster 9'), (1, 'Cluster 164'), (2, 'Cluster 911'), (2, 'Cluster 809'), (2, 'Cluster 1230'), (2, 'Cluster 810'), (0, 'Cluster 23'), (1, 'Cluster 292'), (2, 'Cluster 1188'), (0, 'Cluster 11'), (1, 'Cluster 187'), (2, 'Cluster 957')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-3863cf622de51edc8bf820a98bb7bed2', 4), ('doc-3879a69225bb361e837b309119778934', 7)]
+
+2026-05-05 10:37:19,581 - [94m[Retrieval Time: 6.393994 seconds][0m
+2026-05-05 10:37:19,612 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-05-05 10:37:20,417 - Using 20 entites, 25 communities, 136 reasoning path items, 2 text units
+2026-05-05 10:37:20,417 - ====== References ======:
+Entities (20): ['"MAKING YOUR SMALL FARM PROFITABLE"', '"BIGGEST LITTLE FARM IN AMERICA"', '"PEREGRINE FARM"', '"CAROL EKARIUS"', '"FOUR SEASON FARM"', '"SARAH BETH AUBREY"', '"WILD ONION FARM"', '"NATIONAL SMALL FARM COMMISSION"', '"TRUCK FARM"', '"FAMILY & SMALL FARMS"', '"EXPLORING THE SMALL FARM DREAM"', '"CREEKSTONE FARMS"', '"SPIN (SMALL PLOT INTENSIVE) FARMING"', '"NATURAL FARMING"', '"STARTING & RUNNING YOUR OWN SMALL FARM BUSINESS"', '"THE SHEER ECSTASY OF BEING A LUNATIC FARMER"', '"HOME-GROWN WISCONSIN"', '"NEW ENGLAND SMALL FARM INSTITUTE"', '"STEPHEN LESLIE"', '"GEORGIA GROWN"']
+
+Communities (level, cluster_id) (25): [(0, 'Cluster 24'), (1, 'Cluster 307'), (2, 'Cluster 1236'), (0, 'Cluster 6'), (1, 'Cluster 136'), (1, 'Cluster 308'), (2, 'Cluster 1239'), (0, 'Cluster 9'), (1, 'Cluster 164'), (2, 'Cluster 911'), (2, 'Cluster 1230'), (0, 'Cluster 10'), (1, 'Cluster 185'), (2, 'Cluster 954'), (2, 'Cluster 809'), (2, 'Cluster 810'), (0, 'Cluster 4'), (1, 'Cluster 98'), (2, 'Cluster 686'), (0, 'Cluster 14'), (1, 'Cluster 217'), (2, 'Cluster 1032'), (0, 'Cluster 23'), (1, 'Cluster 297'), (2, 'Cluster 1204')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-3863cf622de51edc8bf820a98bb7bed2', 2), ('doc-3863cf622de51edc8bf820a98bb7bed2', 1)]
+
+2026-05-05 10:37:20,419 - [94m[Retrieval Time: 0.805877 seconds][0m
+2026-05-05 10:37:29,003 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:37:29,036 - Using 20 entites, 26 communities, 118 reasoning path items, 2 text units
+2026-05-05 10:37:29,037 - ====== References ======:
+Entities (20): ['"NORTHERN GRAIN GROWERS ASSOCIATION"', '"INTERVALE FARMS"', '"NIMAN RANCH"', '"BEGINNINGFARMERS.ORG"', '"THE INTERVALE CENTER"', '"MISSOURI FARMERS\' ASSOCIATION"', '"INTERVALE COMMUNITY FARM"', '"COOPERATIVE EXTENSION SYSTEM"', '"FARM BEGINNINGS"', '"CROWN O\' MAINE ORGANIC COOPERATIVE"', '"ROBYN VAN EN CENTER"', '"PRACTICAL FARMERS OF IOWA"', '"BROMFIELD"', '"TEMPLETON WILTON COMMUNITY FARM"', '"MULTINATIONAL EXCHANGE FOR SUSTAINABLE AGRICULTURE (MESA)"', '"ORGANIZATIONS, FOR FARMERS"', '"FARMERS\' FEDERATION"', '"FARMS PROGRAM"', '"CITY FARMER"', '"LOCAL HARVEST"']
+
+Communities (level, cluster_id) (26): [(0, 'Cluster 10'), (0, 'Cluster 6'), (1, 'Cluster 179'), (2, 'Cluster 931'), (1, 'Cluster 124'), (2, 'Cluster 741'), (1, 'Cluster 176'), (0, 'Cluster 2'), (1, 'Cluster 83'), (2, 'Cluster 634'), (1, 'Cluster 186'), (1, 'Cluster 134'), (2, 'Cluster 801'), (0, 'Cluster 29'), (1, 'Cluster 378'), (2, 'Cluster 1436'), (1, 'Cluster 136'), (2, 'Cluster 809'), (0, 'Cluster 43'), (1, 'Cluster 515'), (2, 'Cluster 1822'), (0, 'Cluster 32'), (1, 'Cluster 404'), (2, 'Cluster 1493'), (1, 'Cluster 175'), (2, 'Cluster 924')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-93ffb247e9024215dce51173164b809a', 150), ('doc-93ffb247e9024215dce51173164b809a', 169)]
+
+2026-05-05 10:37:29,037 - [94m[Retrieval Time: 0.032866 seconds][0m
+2026-05-05 10:38:16,339 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:38:16,715 - Using 20 entites, 26 communities, 121 reasoning path items, 2 text units
+2026-05-05 10:38:16,716 - ====== References ======:
+Entities (20): ['"NORTHERN GRAIN GROWERS ASSOCIATION"', '"INTERVALE FARMS"', '"NIMAN RANCH"', '"BEGINNINGFARMERS.ORG"', '"THE INTERVALE CENTER"', '"MISSOURI FARMERS\' ASSOCIATION"', '"INTERVALE COMMUNITY FARM"', '"COOPERATIVE EXTENSION SYSTEM"', '"FARM BEGINNINGS"', '"CROWN O\' MAINE ORGANIC COOPERATIVE"', '"ROBYN VAN EN CENTER"', '"PRACTICAL FARMERS OF IOWA"', '"BROMFIELD"', '"TEMPLETON WILTON COMMUNITY FARM"', '"MULTINATIONAL EXCHANGE FOR SUSTAINABLE AGRICULTURE (MESA)"', '"ORGANIZATIONS, FOR FARMERS"', '"FARMERS\' FEDERATION"', '"FARMS PROGRAM"', '"CITY FARMER"', '"LOCAL HARVEST"']
+
+Communities (level, cluster_id) (26): [(0, 'Cluster 10'), (0, 'Cluster 6'), (1, 'Cluster 179'), (2, 'Cluster 931'), (1, 'Cluster 124'), (2, 'Cluster 741'), (1, 'Cluster 176'), (0, 'Cluster 2'), (1, 'Cluster 83'), (2, 'Cluster 634'), (1, 'Cluster 186'), (1, 'Cluster 134'), (2, 'Cluster 801'), (0, 'Cluster 29'), (1, 'Cluster 378'), (2, 'Cluster 1436'), (1, 'Cluster 136'), (2, 'Cluster 809'), (0, 'Cluster 43'), (1, 'Cluster 515'), (2, 'Cluster 1822'), (0, 'Cluster 32'), (1, 'Cluster 404'), (2, 'Cluster 1493'), (1, 'Cluster 175'), (2, 'Cluster 924')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-93ffb247e9024215dce51173164b809a', 150), ('doc-93ffb247e9024215dce51173164b809a', 169)]
+
+2026-05-05 10:38:16,717 - [94m[Retrieval Time: 0.376664 seconds][0m
+2026-05-05 10:38:48,066 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:38:55,041 - Using 20 entites, 26 communities, 252 reasoning path items, 2 text units
+2026-05-05 10:38:55,041 - ====== References ======:
+Entities (20): ['"NORTHERN GRAIN GROWERS ASSOCIATION"', '"INTERVALE FARMS"', '"NIMAN RANCH"', '"BEGINNINGFARMERS.ORG"', '"THE INTERVALE CENTER"', '"MISSOURI FARMERS\' ASSOCIATION"', '"INTERVALE COMMUNITY FARM"', '"COOPERATIVE EXTENSION SYSTEM"', '"FARM BEGINNINGS"', '"CROWN O\' MAINE ORGANIC COOPERATIVE"', '"ROBYN VAN EN CENTER"', '"PRACTICAL FARMERS OF IOWA"', '"BROMFIELD"', '"TEMPLETON WILTON COMMUNITY FARM"', '"MULTINATIONAL EXCHANGE FOR SUSTAINABLE AGRICULTURE (MESA)"', '"ORGANIZATIONS, FOR FARMERS"', '"FARMERS\' FEDERATION"', '"FARMS PROGRAM"', '"CITY FARMER"', '"LOCAL HARVEST"']
+
+Communities (level, cluster_id) (26): [(0, 'Cluster 10'), (0, 'Cluster 6'), (1, 'Cluster 179'), (2, 'Cluster 931'), (1, 'Cluster 124'), (2, 'Cluster 741'), (1, 'Cluster 176'), (0, 'Cluster 2'), (1, 'Cluster 83'), (2, 'Cluster 634'), (1, 'Cluster 186'), (1, 'Cluster 134'), (2, 'Cluster 801'), (0, 'Cluster 29'), (1, 'Cluster 378'), (2, 'Cluster 1436'), (1, 'Cluster 136'), (2, 'Cluster 809'), (0, 'Cluster 43'), (1, 'Cluster 515'), (2, 'Cluster 1822'), (0, 'Cluster 32'), (1, 'Cluster 404'), (2, 'Cluster 1493'), (1, 'Cluster 175'), (2, 'Cluster 924')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-93ffb247e9024215dce51173164b809a', 150), ('doc-93ffb247e9024215dce51173164b809a', 169)]
+
+2026-05-05 10:38:55,045 - [94m[Retrieval Time: 6.977450 seconds][0m
+2026-05-05 10:38:55,081 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-05-05 10:38:59,174 - Using 20 entites, 26 communities, 146 reasoning path items, 2 text units
+2026-05-05 10:38:59,175 - ====== References ======:
+Entities (20): ['"NORTHERN GRAIN GROWERS ASSOCIATION"', '"INTERVALE FARMS"', '"NIMAN RANCH"', '"BEGINNINGFARMERS.ORG"', '"THE INTERVALE CENTER"', '"MISSOURI FARMERS\' ASSOCIATION"', '"INTERVALE COMMUNITY FARM"', '"COOPERATIVE EXTENSION SYSTEM"', '"FARM BEGINNINGS"', '"CROWN O\' MAINE ORGANIC COOPERATIVE"', '"ROBYN VAN EN CENTER"', '"PRACTICAL FARMERS OF IOWA"', '"BROMFIELD"', '"TEMPLETON WILTON COMMUNITY FARM"', '"MULTINATIONAL EXCHANGE FOR SUSTAINABLE AGRICULTURE (MESA)"', '"ORGANIZATIONS, FOR FARMERS"', '"FARMERS\' FEDERATION"', '"FARMS PROGRAM"', '"CITY FARMER"', '"LOCAL HARVEST"']
+
+Communities (level, cluster_id) (26): [(0, 'Cluster 10'), (0, 'Cluster 6'), (1, 'Cluster 179'), (2, 'Cluster 931'), (1, 'Cluster 124'), (2, 'Cluster 741'), (1, 'Cluster 176'), (0, 'Cluster 2'), (1, 'Cluster 83'), (2, 'Cluster 634'), (1, 'Cluster 186'), (1, 'Cluster 134'), (2, 'Cluster 801'), (0, 'Cluster 29'), (1, 'Cluster 378'), (2, 'Cluster 1436'), (1, 'Cluster 136'), (2, 'Cluster 809'), (0, 'Cluster 43'), (1, 'Cluster 515'), (2, 'Cluster 1822'), (0, 'Cluster 32'), (1, 'Cluster 404'), (2, 'Cluster 1493'), (1, 'Cluster 175'), (2, 'Cluster 924')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-93ffb247e9024215dce51173164b809a', 150), ('doc-93ffb247e9024215dce51173164b809a', 169)]
+
+2026-05-05 10:38:59,176 - [94m[Retrieval Time: 4.094609 seconds][0m
+2026-05-05 10:39:07,069 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:39:07,708 - Using 20 entites, 15 communities, 83 reasoning path items, 2 text units
+2026-05-05 10:39:07,708 - ====== References ======:
+Entities (20): ['"BURLINGTON, VERMONT"', '"THE INTERVALE"', '"INTERVALE COMMUNITY FARM"', '"THE INTERVALE CENTER"', '"INTERVALE COMMUNITY FARM COOPERATIVE"', '"INTERVALE FARMS"', '"ANDY JONES"', '"ICF"', '"INTERVALE CENTER"', '"COMMUNITY ALLIANCE WITH FAMILY FARMERS"', '"MICHIGAN INTEGRATED FOOD AND FARMING SYSTEMS"', '"NORTHERN GRAIN GROWERS ASSOCIATION"', '"FARM BEGINNINGS"', '"ROBYN VAN EN CENTER"', '"FARMERS MARKET COALITION"', '"ORGANIZATIONS, FOR FARMERS"', '"FARMS PROGRAM"', '"BEGINNINGFARMERS.ORG"', '"TILTH"', '"FARMERS\' LEGAL ACTION GROUP"']
+
+Communities (level, cluster_id) (15): [(0, 'Cluster 10'), (1, 'Cluster 175'), (1, 'Cluster 176'), (2, 'Cluster 926'), (2, 'Cluster 924'), (1, 'Cluster 179'), (2, 'Cluster 931'), (0, 'Cluster 6'), (1, 'Cluster 134'), (2, 'Cluster 801'), (0, 'Cluster 43'), (1, 'Cluster 515'), (2, 'Cluster 1822'), (0, 'Cluster 7'), (1, 'Cluster 151')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-3879a69225bb361e837b309119778934', 10), ('doc-93ffb247e9024215dce51173164b809a', 48)]
+
+2026-05-05 10:39:07,709 - [94m[Retrieval Time: 0.639596 seconds][0m
+2026-05-05 10:40:05,314 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:40:05,361 - Using 20 entites, 28 communities, 209 reasoning path items, 2 text units
+2026-05-05 10:40:05,362 - ====== References ======:
+Entities (20): ['"S CURVE OF RE-GROWTH"', '"BENT GRASS"', '"MAY-JUNE"', '"LINEHAN, P."', '"RUSSELL, SIR JOHN"', '"NITROGEN DRESSINGS"', '"WATSON, S. J."', '"CRETACEOUS PERIOD"', '"GRASS"', '"GEITH, R."', '"JUNE GRASS HAY, WESTERN"', '"GALSTON"', '"GROWTH SIGMOID"', '"GREGOR, J. W."', '"PASTURE GRASS, WESTERN PLAINS, GROWING, DRIED"', '"THE STOCKMAN GRASS FARMER"', '"ADMONT GRASSLAND EXPERIMENTAL CENTRE"', '"GETREIDEWERT"', '"MAISON RUSTIQUE"', '"AGRONOMY"']
+
+Communities (level, cluster_id) (28): [(0, 'Cluster 26'), (1, 'Cluster 333'), (0, 'Cluster 32'), (0, 'Cluster 0'), (0, 'Cluster 49'), (1, 'Cluster 552'), (2, 'Cluster 1928'), (1, 'Cluster 332'), (2, 'Cluster 1303'), (2, 'Cluster 1311'), (0, 'Cluster 2'), (1, 'Cluster 81'), (2, 'Cluster 626'), (1, 'Cluster 346'), (2, 'Cluster 1346'), (2, 'Cluster 1310'), (0, 'Cluster 18'), (1, 'Cluster 261'), (0, 'Cluster 23'), (1, 'Cluster 298'), (2, 'Cluster 1208'), (1, 'Cluster 405'), (2, 'Cluster 1495'), (1, 'Cluster 409'), (2, 'Cluster 1514'), (0, 'Cluster 43'), (1, 'Cluster 528'), (2, 'Cluster 1861')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-aca46b680bc6f2aabf376d614e951f2c', 23), ('doc-aca46b680bc6f2aabf376d614e951f2c', 105)]
+
+2026-05-05 10:40:05,362 - [94m[Retrieval Time: 0.047089 seconds][0m
+2026-05-05 10:40:05,410 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-05-05 10:40:05,857 - Using 20 entites, 28 communities, 199 reasoning path items, 2 text units
+2026-05-05 10:40:05,857 - ====== References ======:
+Entities (20): ['"S CURVE OF RE-GROWTH"', '"BENT GRASS"', '"MAY-JUNE"', '"LINEHAN, P."', '"RUSSELL, SIR JOHN"', '"NITROGEN DRESSINGS"', '"WATSON, S. J."', '"CRETACEOUS PERIOD"', '"GRASS"', '"GEITH, R."', '"JUNE GRASS HAY, WESTERN"', '"GALSTON"', '"GROWTH SIGMOID"', '"GREGOR, J. W."', '"PASTURE GRASS, WESTERN PLAINS, GROWING, DRIED"', '"THE STOCKMAN GRASS FARMER"', '"ADMONT GRASSLAND EXPERIMENTAL CENTRE"', '"GETREIDEWERT"', '"MAISON RUSTIQUE"', '"AGRONOMY"']
+
+Communities (level, cluster_id) (28): [(0, 'Cluster 26'), (1, 'Cluster 333'), (0, 'Cluster 32'), (0, 'Cluster 0'), (0, 'Cluster 49'), (1, 'Cluster 552'), (2, 'Cluster 1928'), (1, 'Cluster 332'), (2, 'Cluster 1303'), (2, 'Cluster 1311'), (0, 'Cluster 2'), (1, 'Cluster 81'), (2, 'Cluster 626'), (1, 'Cluster 346'), (2, 'Cluster 1346'), (2, 'Cluster 1310'), (0, 'Cluster 18'), (1, 'Cluster 261'), (0, 'Cluster 23'), (1, 'Cluster 298'), (2, 'Cluster 1208'), (1, 'Cluster 405'), (2, 'Cluster 1495'), (1, 'Cluster 409'), (2, 'Cluster 1514'), (0, 'Cluster 43'), (1, 'Cluster 528'), (2, 'Cluster 1861')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-aca46b680bc6f2aabf376d614e951f2c', 23), ('doc-aca46b680bc6f2aabf376d614e951f2c', 105)]
+
+2026-05-05 10:40:05,858 - [94m[Retrieval Time: 0.446756 seconds][0m
+2026-05-05 10:40:05,889 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-05-05 10:40:14,718 - Using 20 entites, 28 communities, 239 reasoning path items, 2 text units
+2026-05-05 10:40:14,719 - ====== References ======:
+Entities (20): ['"S CURVE OF RE-GROWTH"', '"BENT GRASS"', '"MAY-JUNE"', '"LINEHAN, P."', '"RUSSELL, SIR JOHN"', '"NITROGEN DRESSINGS"', '"WATSON, S. J."', '"CRETACEOUS PERIOD"', '"GRASS"', '"GEITH, R."', '"JUNE GRASS HAY, WESTERN"', '"GALSTON"', '"GROWTH SIGMOID"', '"GREGOR, J. W."', '"PASTURE GRASS, WESTERN PLAINS, GROWING, DRIED"', '"THE STOCKMAN GRASS FARMER"', '"ADMONT GRASSLAND EXPERIMENTAL CENTRE"', '"GETREIDEWERT"', '"MAISON RUSTIQUE"', '"AGRONOMY"']
+
+Communities (level, cluster_id) (28): [(0, 'Cluster 26'), (1, 'Cluster 333'), (0, 'Cluster 32'), (0, 'Cluster 0'), (0, 'Cluster 49'), (1, 'Cluster 552'), (2, 'Cluster 1928'), (1, 'Cluster 332'), (2, 'Cluster 1303'), (2, 'Cluster 1311'), (0, 'Cluster 2'), (1, 'Cluster 81'), (2, 'Cluster 626'), (1, 'Cluster 346'), (2, 'Cluster 1346'), (2, 'Cluster 1310'), (0, 'Cluster 18'), (1, 'Cluster 261'), (0, 'Cluster 23'), (1, 'Cluster 298'), (2, 'Cluster 1208'), (1, 'Cluster 405'), (2, 'Cluster 1495'), (1, 'Cluster 409'), (2, 'Cluster 1514'), (0, 'Cluster 43'), (1, 'Cluster 528'), (2, 'Cluster 1861')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-aca46b680bc6f2aabf376d614e951f2c', 23), ('doc-aca46b680bc6f2aabf376d614e951f2c', 105)]
+
+2026-05-05 10:40:14,720 - [94m[Retrieval Time: 8.830104 seconds][0m
+2026-05-05 10:40:14,754 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-05-05 10:40:20,721 - Using 20 entites, 28 communities, 148 reasoning path items, 2 text units
+2026-05-05 10:40:20,721 - ====== References ======:
+Entities (20): ['"S CURVE OF RE-GROWTH"', '"BENT GRASS"', '"MAY-JUNE"', '"LINEHAN, P."', '"RUSSELL, SIR JOHN"', '"NITROGEN DRESSINGS"', '"WATSON, S. J."', '"CRETACEOUS PERIOD"', '"GRASS"', '"GEITH, R."', '"JUNE GRASS HAY, WESTERN"', '"GALSTON"', '"GROWTH SIGMOID"', '"GREGOR, J. W."', '"PASTURE GRASS, WESTERN PLAINS, GROWING, DRIED"', '"THE STOCKMAN GRASS FARMER"', '"ADMONT GRASSLAND EXPERIMENTAL CENTRE"', '"GETREIDEWERT"', '"MAISON RUSTIQUE"', '"AGRONOMY"']
+
+Communities (level, cluster_id) (28): [(0, 'Cluster 26'), (1, 'Cluster 333'), (0, 'Cluster 32'), (0, 'Cluster 0'), (0, 'Cluster 49'), (1, 'Cluster 552'), (2, 'Cluster 1928'), (1, 'Cluster 332'), (2, 'Cluster 1303'), (2, 'Cluster 1311'), (0, 'Cluster 2'), (1, 'Cluster 81'), (2, 'Cluster 626'), (1, 'Cluster 346'), (2, 'Cluster 1346'), (2, 'Cluster 1310'), (0, 'Cluster 18'), (1, 'Cluster 261'), (0, 'Cluster 23'), (1, 'Cluster 298'), (2, 'Cluster 1208'), (1, 'Cluster 405'), (2, 'Cluster 1495'), (1, 'Cluster 409'), (2, 'Cluster 1514'), (0, 'Cluster 43'), (1, 'Cluster 528'), (2, 'Cluster 1861')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-aca46b680bc6f2aabf376d614e951f2c', 23), ('doc-aca46b680bc6f2aabf376d614e951f2c', 105)]
+
+2026-05-05 10:40:20,722 - [94m[Retrieval Time: 5.967640 seconds][0m
+2026-05-05 10:40:30,112 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:40:30,987 - Using 20 entites, 28 communities, 130 reasoning path items, 2 text units
+2026-05-05 10:40:30,988 - ====== References ======:
+Entities (20): ['"UNIVERSAL LAWS OF RATIONAL GRAZING"', '"S CURVE OF RE-GROWTH"', '"PROFESSOR ZÜRN"', '"MAY-JUNE"', '"ZÜRN"', '"RENGEN EXPERIMENTS"', '"PASTURE GRASS, WESTERN PLAINS, GROWING, DRIED"', '"MODERN METHODS OF GRASSLAND MANAGEMENT"', '"COROLLARY I OF THE THIRD LAW"', '"NITROGEN DRESSINGS"', '"NITROGENOUS FERTILISER"', '"GRASSLAND RESEARCH STATIONS"', '"SEPTEMBER"', '"GRASSLAND HUSBANDRY"', '"CLOSE FOLDING"', '"SOUTH-WEST MONSOON"', '"GREEN (CHEMICAL) REVOLUTION"', '"CRETACEOUS PERIOD"', '"GREENER PASTURES ON YOUR SIDE OF THE FENCE"', '"RUSSELL, SIR JOHN"']
+
+Communities (level, cluster_id) (28): [(0, 'Cluster 32'), (0, 'Cluster 26'), (1, 'Cluster 413'), (1, 'Cluster 405'), (2, 'Cluster 1495'), (1, 'Cluster 332'), (1, 'Cluster 403'), (0, 'Cluster 2'), (2, 'Cluster 1531'), (0, 'Cluster 0'), (1, 'Cluster 340'), (1, 'Cluster 409'), (2, 'Cluster 1515'), (2, 'Cluster 1528'), (2, 'Cluster 1303'), (2, 'Cluster 1483'), (2, 'Cluster 1307'), (1, 'Cluster 84'), (2, 'Cluster 643'), (2, 'Cluster 1486'), (0, 'Cluster 36'), (1, 'Cluster 443'), (2, 'Cluster 1592'), (1, 'Cluster 81'), (2, 'Cluster 626'), (0, 'Cluster 49'), (1, 'Cluster 552'), (2, 'Cluster 1928')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-aca46b680bc6f2aabf376d614e951f2c', 61), ('doc-aca46b680bc6f2aabf376d614e951f2c', 62)]
+
+2026-05-05 10:40:30,989 - [94m[Retrieval Time: 0.875865 seconds][0m
+2026-05-05 10:40:39,882 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 200 OK"
+2026-05-05 10:40:39,907 - Using 20 entites, 32 communities, 166 reasoning path items, 2 text units
+2026-05-05 10:40:39,908 - ====== References ======:
+Entities (20): ['"BIODYNAMIC"', '"SUSTAINABLE FARM MANAGEMENT"', '"GREEN REVOLUTION TECHNOLOGIES"', '"PRACTICAL AGRICULTURE"', '"CITY FARMER"', '"CONVENTIONAL FARMS"', '"URBAN AGRICULTURE"', '"THE URBAN FARM"', '"CITY SEEDS URBAN FARM"', '"COMMUNITY ROOTS"', '"COMMUNITY GARDENING"', '"REGENERATIVE PRACTICES"', '"ECOLOGICAL AGRICULTURE MOVEMENT"', '"KANSAS RURAL CENTER"', '"BROMFIELD"', '"RADICAL ROOTS"', '"REGENERATIVE ORGANIC AGRICULTURE"', '"PHILADELPHIA HORTICULTURE CLUBS"', '"ROTATIONAL TILLAGE"', '"GREENSGROW CSA"']
+
+Communities (level, cluster_id) (32): [(0, 'Cluster 45'), (0, 'Cluster 43'), (1, 'Cluster 536'), (0, 'Cluster 37'), (1, 'Cluster 512'), (2, 'Cluster 1806'), (1, 'Cluster 528'), (2, 'Cluster 1863'), (1, 'Cluster 514'), (2, 'Cluster 1821'), (0, 'Cluster 27'), (1, 'Cluster 356'), (2, 'Cluster 1391'), (0, 'Cluster 2'), (1, 'Cluster 80'), (2, 'Cluster 621'), (2, 'Cluster 1881'), (0, 'Cluster 42'), (1, 'Cluster 511'), (2, 'Cluster 1805'), (0, 'Cluster 25'), (1, 'Cluster 327'), (2, 'Cluster 1294'), (0, 'Cluster 5'), (1, 'Cluster 115'), (2, 'Cluster 717'), (1, 'Cluster 540'), (2, 'Cluster 1896'), (0, 'Cluster 18'), (1, 'Cluster 254'), (2, 'Cluster 1125'), (0, 'Cluster 29')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-ba7087e83ea4ba168fc951df87d56bf2', 128), ('doc-3863cf622de51edc8bf820a98bb7bed2', 67)]
+
+2026-05-05 10:40:39,908 - [94m[Retrieval Time: 0.024874 seconds][0m
+2026-05-05 10:40:39,943 - HTTP Request: POST http://127.0.0.1:8000/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-05-05 10:40:40,590 - Using 20 entites, 32 communities, 184 reasoning path items, 2 text units
+2026-05-05 10:40:40,590 - ====== References ======:
+Entities (20): ['"BIODYNAMIC"', '"SUSTAINABLE FARM MANAGEMENT"', '"GREEN REVOLUTION TECHNOLOGIES"', '"PRACTICAL AGRICULTURE"', '"CITY FARMER"', '"CONVENTIONAL FARMS"', '"URBAN AGRICULTURE"', '"THE URBAN FARM"', '"CITY SEEDS URBAN FARM"', '"COMMUNITY ROOTS"', '"COMMUNITY GARDENING"', '"REGENERATIVE PRACTICES"', '"ECOLOGICAL AGRICULTURE MOVEMENT"', '"KANSAS RURAL CENTER"', '"BROMFIELD"', '"RADICAL ROOTS"', '"REGENERATIVE ORGANIC AGRICULTURE"', '"PHILADELPHIA HORTICULTURE CLUBS"', '"ROTATIONAL TILLAGE"', '"GREENSGROW CSA"']
+
+Communities (level, cluster_id) (32): [(0, 'Cluster 45'), (0, 'Cluster 43'), (1, 'Cluster 536'), (0, 'Cluster 37'), (1, 'Cluster 512'), (2, 'Cluster 1806'), (1, 'Cluster 528'), (2, 'Cluster 1863'), (1, 'Cluster 514'), (2, 'Cluster 1821'), (0, 'Cluster 27'), (1, 'Cluster 356'), (2, 'Cluster 1391'), (0, 'Cluster 2'), (1, 'Cluster 80'), (2, 'Cluster 621'), (2, 'Cluster 1881'), (0, 'Cluster 42'), (1, 'Cluster 511'), (2, 'Cluster 1805'), (0, 'Cluster 25'), (1, 'Cluster 327'), (2, 'Cluster 1294'), (0, 'Cluster 5'), (1, 'Cluster 115'), (2, 'Cluster 717'), (1, 'Cluster 540'), (2, 'Cluster 1896'), (0, 'Cluster 18'), (1, 'Cluster 254'), (2, 'Cluster 1125'), (0, 'Cluster 29')]
+
+Chunks (doc_id, chunk_index) (2): [('doc-ba7087e83ea4ba168fc951df87d56bf2', 128), ('doc-3863cf622de51edc8bf820a98bb7bed2', 67)]
+
+2026-05-05 10:40:40,591 - [94m[Retrieval Time: 0.648233 seconds][0m

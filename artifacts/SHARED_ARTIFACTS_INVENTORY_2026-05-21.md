@@ -181,6 +181,15 @@ Suggested contents:
 This package would be small enough to review and would avoid duplicating the
 full 1.1 GB `.runs/` tree.
 
+An initial legacy answer-evaluation package has been created under:
+
+```text
+artifacts/legacy_answer_eval_2026-05-21/
+```
+
+It intentionally keeps previous answer/context/judge artifacts separate from
+both the final summary folders and the new full OpenAI-only reruns.
+
 ## Recommended Sharing Package After Full OpenAI Reruns
 
 For the new Agriculture and Mix full OpenAI reruns, share the following per

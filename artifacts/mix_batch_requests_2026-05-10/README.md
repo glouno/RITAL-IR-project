@@ -53,9 +53,7 @@ Fresh judge Batch requests:
 - 120 requests: 30 queries x 2 comparisons x 2 swapped answer orders
 - model: `gpt-5.4-mini`
 
-Submit the judge file to OpenAI Batch with endpoint `/v1/chat/completions` and
-`completion_window="24h"`. After the judge batch completes, import it with
-`eval/import_openai_batch_judgments.py`.
+The judge file was submitted to OpenAI Batch and imported successfully.
 
 Imported judge output:
 
@@ -69,7 +67,7 @@ Imported judge output:
   - `hi_minmax_budgeted`: 14/30 query pairs agree, strict variant win rate 6.7%
   - `hi_rerank_weighted`: 21/30 query pairs agree, strict variant win rate 40.0%
 
-Convenience launcher:
+Convenience launcher used for this kind of Batch submission:
 
 ```bash
 export OPENAI_API_KEY=...

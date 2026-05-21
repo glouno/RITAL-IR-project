@@ -1,0 +1,3 @@
+variant,query_pairs,agreement,disagreement,agreed_variant,agreed_baseline,agreed_tie,agreement_rate,strict_variant_win_rate
+hi_minmax_budgeted,30,14,16,2,12,0,0.4666666666666667,0.06666666666666667
+hi_rerank_weighted,30,21,9,12,9,0,0.7,0.4

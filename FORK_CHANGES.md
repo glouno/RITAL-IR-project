@@ -684,3 +684,45 @@ Relevant files:
 
 - [artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/judge_summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/judge_summary.md)
 - [artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/swapped_order_agreement.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/swapped_order_agreement.md)
+
+## Final Agriculture Judge Completion And Analysis
+
+### 2026-05-21
+
+Finished the remaining agriculture q30 judge evaluation and consolidated the
+final project results.
+
+What changed:
+
+- Submitted the prepared 74-row missing agriculture judge Batch file with the
+  repo Batch launcher.
+- Imported the completed output and merged it with the earlier 46 imported
+  judge rows into a full 120-row agriculture judge result set.
+- Added full agriculture swapped-order agreement artifacts.
+- Added a final consolidated analysis folder comparing Agriculture and Mix
+  answer-level judge results, strict swapped-order agreement, token cost, graph
+  construction status, and final limitations.
+- Updated the presentation notes to remove stale "pending submission" language
+  and center the final claim around `hi_rerank_weighted`.
+
+Final answer-level judge signal:
+
+- Agriculture:
+  - `hi_minmax_budgeted` vs `hi`: 30 wins, 30 losses, 0 ties, raw win rate 50.0%.
+  - `hi_rerank_weighted` vs `hi`: 35 wins, 25 losses, 0 ties, raw win rate 58.3%.
+- Mix:
+  - `hi_minmax_budgeted` vs `hi`: 17 wins, 40 losses, 3 ties, raw win rate 28.3%.
+  - `hi_rerank_weighted` vs `hi`: 33 wins, 27 losses, 0 ties, raw win rate 55.0%.
+
+Takeaway:
+
+- `hi_rerank_weighted` is the cleaner final improvement: positive raw judge win
+  rate on both final datasets, stronger swapped-order reliability than
+  `hi_minmax_budgeted`, and lower answer-token usage than baseline.
+
+Relevant files:
+
+- [artifacts/final_analysis_2026-05-21/summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/final_analysis_2026-05-21/summary.md)
+- [artifacts/agriculture_graphs_2026-04-23/final_evaluation/full_q30_judge_summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/final_evaluation/full_q30_judge_summary.md)
+- [artifacts/agriculture_graphs_2026-04-23/final_evaluation/swapped_order_agreement.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/final_evaluation/swapped_order_agreement.md)
+- [artifacts/final_project_presentation_notes_2026-05-11.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/final_project_presentation_notes_2026-05-11.md)

@@ -820,3 +820,29 @@ Relevant files:
 - [eval/export_openai_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_requests.py)
 - [eval/summarize_retrieval_traces.py](/home/paulbeglin/projects/RITAL-IR-project/eval/summarize_retrieval_traces.py)
 - [docs/OPENAI_FULL_HIRAG_RUNBOOK.md](/home/paulbeglin/projects/RITAL-IR-project/docs/OPENAI_FULL_HIRAG_RUNBOOK.md)
+
+## Run Inventory And Artifact Organization
+
+### 2026-05-21
+
+Added a central run index and a reserved artifact destination for the full
+OpenAI-only HiRAG reruns.
+
+What changed:
+
+- Added `artifacts/RUNS_INDEX_2026-05-21.md` to classify active, final,
+  legacy, superseded, smoke, and cache run folders.
+- Reserved `artifacts/openai_full_hirag_2026-05/` as the clean destination for
+  validated Agriculture and Mix full OpenAI rerun outputs.
+- Updated the shared artifact inventory to point collaborators to the run index
+  and future full OpenAI artifact destination.
+
+Safety note:
+
+- `.runs/openai_full_hirag_2026-05/` remains untouched while the active Batch
+  `screen` sessions are running.
+
+Relevant files:
+
+- [artifacts/RUNS_INDEX_2026-05-21.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/RUNS_INDEX_2026-05-21.md)
+- [artifacts/openai_full_hirag_2026-05/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/README.md)

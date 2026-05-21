@@ -190,6 +190,18 @@ artifacts/legacy_answer_eval_2026-05-21/
 It intentionally keeps previous answer/context/judge artifacts separate from
 both the final summary folders and the new full OpenAI-only reruns.
 
+The central run classification index is:
+
+```text
+artifacts/RUNS_INDEX_2026-05-21.md
+```
+
+The future destination for cleaned full OpenAI rerun outputs is:
+
+```text
+artifacts/openai_full_hirag_2026-05/
+```
+
 ## Recommended Sharing Package After Full OpenAI Reruns
 
 For the new Agriculture and Mix full OpenAI reruns, share the following per

@@ -51,7 +51,7 @@ uv run python main.py \
   --embed-model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 \
   --embed-dim 384 \
   --max-token-size 8192 \
-  --fastembed-cache-path .runs/fastembed_cache
+  --fastembed-cache-path .runs/fastembed_cache \
 ```
 
 If you want raw retrieval context only, use small Python harness:
@@ -103,8 +103,8 @@ Runs answer generation through local vLLM only.
 uv run python eval/answer_generation_benchmark.py \
   --working-dir .runs/openai_index_batch/mix_hirag_workdir_gpt54_mini_final \
   --query-file eval/datasets/mix/mix.jsonl \
-  --query-limit 30 \
-  --variants hi hi_minmax_budgeted hi_rerank_weighted hi_mcts \
+  --query-limit 100 \
+  --variants hi_mcts \
   --output-dir .runs/answer_eval/mix_mcts_eval \
   --overwrite \
   --base-url http://127.0.0.1:8000/v1 \

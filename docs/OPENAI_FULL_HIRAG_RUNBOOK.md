@@ -307,6 +307,18 @@ uv run python eval/export_openai_batch_requests.py \
   --completion-token-param max_completion_tokens
 ```
 
+This also writes `retrieval_traces.jsonl`, which should be kept with the final
+artifacts. It contains the selected entities, communities, bridge edges, bridge
+path decisions, token budgets, and context sections for each query/variant.
+
+Summarize retrieval traces:
+
+```bash
+uv run python eval/summarize_retrieval_traces.py \
+  --traces "$ROOT/$DATASET/11_answers/requests/retrieval_traces.jsonl" \
+  --output-dir "$ROOT/$DATASET/11_answers/retrieval_trace_summary"
+```
+
 For `mix`, use `eval/datasets/mix/mix.jsonl` as the query file. After importing
 answers, export judges:
 

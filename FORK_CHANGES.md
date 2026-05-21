@@ -791,3 +791,32 @@ What changed:
 Relevant file:
 
 - [docs/DYNAMIC_GRAPH_TRAVERSAL_EXTENSION.md](/home/paulbeglin/projects/RITAL-IR-project/docs/DYNAMIC_GRAPH_TRAVERSAL_EXTENSION.md)
+
+## Retrieval Trace Capture For Answer Runs
+
+### 2026-05-21
+
+Extended answer Batch export so final OpenAI answer runs preserve detailed
+retrieval traces for later benchmarking.
+
+What changed:
+
+- `eval/export_openai_batch_requests.py` now writes `retrieval_traces.jsonl`
+  for every query/variant, including selected entities, communities, bridge
+  edges, bridge path decisions, path length metrics, context sections, and
+  budget attempts.
+- Added `eval/summarize_retrieval_traces.py` to produce CSV/JSON/Markdown
+  summaries grouped by retrieval variant.
+- Updated the OpenAI full-run runbook to keep and summarize these traces after
+  answer request export.
+
+Validation:
+
+- `uv run pytest tests/test_answer_level_evaluation.py tests/test_hirag_retrieval_experiments.py tests/test_cluster_balance.py`
+- `uv run python -m py_compile eval/export_openai_batch_requests.py eval/summarize_retrieval_traces.py`
+
+Relevant files:
+
+- [eval/export_openai_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_requests.py)
+- [eval/summarize_retrieval_traces.py](/home/paulbeglin/projects/RITAL-IR-project/eval/summarize_retrieval_traces.py)
+- [docs/OPENAI_FULL_HIRAG_RUNBOOK.md](/home/paulbeglin/projects/RITAL-IR-project/docs/OPENAI_FULL_HIRAG_RUNBOOK.md)

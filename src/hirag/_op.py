@@ -34,6 +34,7 @@ from .base import (
 )
 from .prompt import GRAPH_FIELD_SEP, PROMPTS
 from ._cluster_utils import Hierarchical_Clustering
+from .mcts import MCTSBridgeConfig, find_mcts_bridge_path
 
 
 @contextmanager
@@ -1756,6 +1757,25 @@ def _weighted_dijkstra_path(
     )
 
 
+def _mcts_config_from_query(query_param: QueryParam) -> MCTSBridgeConfig:
+    return MCTSBridgeConfig(
+        max_iterations=query_param.mcts_max_iterations,
+        exploration_constant=query_param.mcts_exploration_constant,
+        candidate_hops=query_param.mcts_candidate_hops,
+        candidate_top_neighbors=query_param.mcts_candidate_top_neighbors,
+        progressive_widening_coefficient=query_param.mcts_progressive_widening_coefficient,
+        progressive_widening_exponent=query_param.mcts_progressive_widening_exponent,
+        rollout_top_k=query_param.mcts_rollout_top_k,
+        rollout_depth=query_param.mcts_rollout_depth,
+        rollout_epsilon=query_param.mcts_rollout_epsilon,
+        max_path_edges=query_param.bridge_max_path_edges,
+        max_token_budget=query_param.max_token_for_bridge_knowledge,
+        length_penalty=query_param.bridge_length_penalty,
+        token_penalty=query_param.mcts_token_penalty,
+        target_reward=query_param.mcts_target_reward,
+    )
+
+
 def _minmax_path(
     graph: nx.Graph,
     source: str,
@@ -1842,35 +1862,49 @@ async def _path_between(
     target: str,
     query_param: QueryParam,
     edge_costs: dict[tuple[str, str], dict[str, float]],
-) -> tuple[list[str], str]:
+) -> tuple[list[str], str, dict[str, Any]]:
     from ._storage.gdb_neo4j import Neo4jStorage
 
     graph = _networkx_graph_from_storage(knowledge_graph_inst)
     try:
         if (
             graph is not None
+            and query_param.bridge_strategy == "mcts"
+            and edge_costs
+        ):
+            path, metadata = find_mcts_bridge_path(
+                graph,
+                source,
+                target,
+                edge_costs,
+                _mcts_config_from_query(query_param),
+            )
+            return path, metadata.get("decision", "mcts"), metadata
+        if (
+            graph is not None
             and query_param.bridge_strategy == "query_weighted"
             and edge_costs
         ):
-            return _weighted_dijkstra_path(graph, source, target, edge_costs), "query_weighted"
+            return _weighted_dijkstra_path(graph, source, target, edge_costs), "query_weighted", {}
         if (
             graph is not None
             and query_param.bridge_strategy == "minmax"
             and edge_costs
         ):
-            return _minmax_path(graph, source, target, edge_costs), "minmax"
+            return _minmax_path(graph, source, target, edge_costs), "minmax", {}
         if (
             graph is not None
             and query_param.bridge_strategy == "minmax_budgeted"
             and edge_costs
         ):
-            return _minmax_budgeted_path(graph, source, target, edge_costs, query_param)
+            path, decision = _minmax_budgeted_path(graph, source, target, edge_costs, query_param)
+            return path, decision, {}
         if isinstance(knowledge_graph_inst, Neo4jStorage):
-            return await knowledge_graph_inst.shortest_path(source, target), "unweighted"
+            return await knowledge_graph_inst.shortest_path(source, target), "unweighted", {}
         if graph is not None:
-            return nx.shortest_path(graph, source=source, target=target), "unweighted"
+            return nx.shortest_path(graph, source=source, target=target), "unweighted", {}
     except (nx.NetworkXNoPath, nx.NodeNotFound):
-        return [], "no_path"
+        return [], "no_path", {}
     except Exception as exc:
         logger.warning(
             "Bridge path strategy %s failed between %s and %s; falling back to unweighted path: %s",
@@ -1881,10 +1915,10 @@ async def _path_between(
         )
         if graph is not None:
             try:
-                return nx.shortest_path(graph, source=source, target=target), "unweighted_error_fallback"
+                return nx.shortest_path(graph, source=source, target=target), "unweighted_error_fallback", {}
             except (nx.NetworkXNoPath, nx.NodeNotFound):
-                return [], "no_path"
-    return [], "no_path"
+                return [], "no_path", {}
+    return [], "no_path", {}
 
 
 async def _find_path_with_required_nodes(
@@ -1900,12 +1934,12 @@ async def _find_path_with_required_nodes(
     decisions: list[dict[str, Any]] = []
     total_edges = 0
     for source, target in zip(key_entities, key_entities[1:]):
-        sub_path, decision = await _path_between(
+        sub_path, decision, metadata = await _path_between(
             knowledge_graph_inst, source, target, query_param, edge_costs
         )
         sub_edges = max(0, len(sub_path) - 1)
         if (
-            query_param.bridge_strategy == "minmax_budgeted"
+            query_param.bridge_strategy in {"minmax_budgeted", "mcts"}
             and query_param.bridge_max_total_edges > 0
             and total_edges + sub_edges > query_param.bridge_max_total_edges
         ):
@@ -1916,6 +1950,7 @@ async def _find_path_with_required_nodes(
                     "decision": "budget_stop",
                     "path_edges": sub_edges,
                     "total_edges_before": total_edges,
+                    **metadata,
                 }
             )
             break
@@ -1925,6 +1960,7 @@ async def _find_path_with_required_nodes(
                 "target": target,
                 "decision": decision,
                 "path_edges": sub_edges,
+                **metadata,
             }
         )
         if not sub_path:
@@ -1972,7 +2008,7 @@ async def _build_bridge_path_data(
 ) -> tuple[list[str], list[dict], dict[tuple[str, str], dict[str, float]]]:
     embedding_func = global_config.get("embedding_func")
     edge_costs: dict[tuple[str, str], dict[str, float]] = {}
-    if query_param.bridge_strategy in {"query_weighted", "minmax", "minmax_budgeted"}:
+    if query_param.bridge_strategy in {"query_weighted", "minmax", "minmax_budgeted", "mcts"}:
         edge_costs = await _build_query_edge_costs(
             query, knowledge_graph_inst, query_param, embedding_func, global_config
         )

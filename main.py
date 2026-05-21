@@ -369,6 +369,7 @@ def parse_args() -> argparse.Namespace:
         "hi_weighted",
         "hi_minmax",
         "hi_minmax_budgeted",
+        "hi_mcts",
         "hi_rerank",
         "hi_rerank_weighted",
         "naive",

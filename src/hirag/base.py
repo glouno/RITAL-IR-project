@@ -16,6 +16,7 @@ class QueryParam:
         "hi_weighted",
         "hi_minmax",
         "hi_minmax_budgeted",
+        "hi_mcts",
         "hi_rerank",
         "hi_rerank_weighted",
     ] = "hi"
@@ -24,7 +25,7 @@ class QueryParam:
     level: int = 2
     top_k: int = 20         # retrieve top-k entities
     top_m: int = 10         # retrieve top-m entities in each retrieved community
-    bridge_strategy: Literal["unweighted", "query_weighted", "minmax", "minmax_budgeted"] = "unweighted"
+    bridge_strategy: Literal["unweighted", "query_weighted", "minmax", "minmax_budgeted", "mcts"] = "unweighted"
     local_rerank_strategy: Literal["none", "fastembed_late_interaction"] = "none"
     local_candidate_multiplier: int = 10
     local_rerank_top_n: int = 100
@@ -35,6 +36,17 @@ class QueryParam:
     bridge_max_total_edges: int = 220
     bridge_length_penalty: float = 0.02
     bridge_budget_fallback: Literal["weighted", "unweighted"] = "weighted"
+    mcts_max_iterations: int = 96
+    mcts_exploration_constant: float = 1.2
+    mcts_candidate_hops: int = 2
+    mcts_candidate_top_neighbors: int = 12
+    mcts_progressive_widening_coefficient: float = 2.0
+    mcts_progressive_widening_exponent: float = 0.5
+    mcts_rollout_top_k: int = 3
+    mcts_rollout_depth: int = 4
+    mcts_rollout_epsilon: float = 0.1
+    mcts_token_penalty: float = 0.15
+    mcts_target_reward: float = 1.0
     # naive search
     naive_max_token_for_text_unit = 10000
     # hi search

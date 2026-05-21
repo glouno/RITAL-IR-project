@@ -237,7 +237,6 @@ Relevant files:
 Added planning notes for the next HiRAG research direction based on the paper, active `src/hirag` implementation, previous agriculture runs, and colleague suggestions.
 
 What changed:
-
 - Added a ranked next-step plan centered on retrieval-first experiments before more expensive indexing runs
 - Captured the current implementation gap: bridge paths are seeded by query-relevant entities but path selection itself is unweighted/topological
 - Proposed query-conditioned bridge retrieval, local retrieval reranking, entropy/confidence-based second-pass clustering, and GMM hardening
@@ -258,6 +257,78 @@ Relevant files:
 ### 2026-05-04
 
 Implemented runnable retrieval experiments on the active `main.py` + `src/hirag/` path without requiring a new indexing run.
+
+## MCTS Bridge Retrieval V1
+
+### 2026-05-21
+
+Added the first narrow MCTS bridge-search variant described in `docs/MCTS_BRIDGE_RETRIEVAL_IDEAS.md`, integrated into the active `src/hirag` retrieval path.
+
+What changed:
+
+- Added one new hierarchical retrieval preset:
+  - `hi_mcts`
+- Added one new bridge strategy:
+  - `mcts`
+- Implemented MCTS as a query-weighted bridge policy with:
+  - candidate-subgraph pruning around the source/target entities
+  - UCT selection
+  - progressive widening
+  - heuristic rollout
+  - bridge path-length and token-budget guards
+  - automatic fallback to weighted Dijkstra when MCTS does not beat the weighted bridge
+- Added per-segment debug metadata so retrieval outputs now record MCTS candidate-subgraph size, iteration count, rollout success count, and whether weighted fallback was used
+- Added targeted tests for the new preset/config plumbing and for the MCTS bridge choosing the weighted-relevant route on a small graph
+
+Why this matters:
+
+- keeps the experiment inside the existing `main.py` -> `src/hirag` runtime instead of creating a parallel retrieval stack
+- matches the recommended narrow scope from the design note, which makes the first benchmarkable MCTS variant easier to reason about and safer to compare against `hi_weighted` / `hi_minmax_budgeted`
+
+Relevant files:
+
+- [src/hirag/mcts.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/mcts.py)
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [src/hirag/base.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/base.py)
+- [src/hirag/hirag.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/hirag.py)
+- [main.py](/home/paulbeglin/projects/RITAL-IR-project/main.py)
+- [tests/test_hirag_retrieval_experiments.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_hirag_retrieval_experiments.py)
+- [FORK_CHANGES.md](/home/paulbeglin/projects/RITAL-IR-project/FORK_CHANGES.md)
+
+## MCTS Eval Coverage
+
+### 2026-05-21
+
+Added MCTS-specific eval/test coverage on top of existing retrieval-improvement harnesses.
+
+What changed:
+
+- Extended answer-generation eval debug compaction so `hi_mcts` runs keep:
+  - MCTS segment count
+  - total iterations
+  - successful rollout count
+  - max candidate-subgraph size
+  - weighted-fallback usage flag
+- Added generation-side tests for:
+  - `hi_mcts` query-param budgeting
+  - MCTS debug compaction
+- Added a relaunch runbook for Mix artifact evaluation under `docs/eval/`
+- The runbook explicitly uses local vLLM only and points Mix eval at:
+  - tracked graph artifact
+  - `mix_unique_contexts.json`
+  - `mix.jsonl`
+
+Why this matters:
+
+- keeps MCTS measurable in same retrieval/generation harness already used for earlier retrieval improvements
+- makes rerunning Mix artifact eval reproducible without touching hosted OpenAI APIs
+
+Relevant files:
+
+- [eval/answer_generation_benchmark.py](/home/paulbeglin/projects/RITAL-IR-project/eval/answer_generation_benchmark.py)
+- [tests/test_answer_level_evaluation.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_answer_level_evaluation.py)
+- [docs/eval/mcts_mix_eval.md](/home/paulbeglin/projects/RITAL-IR-project/docs/eval/mcts_mix_eval.md)
+- [FORK_CHANGES.md](/home/paulbeglin/projects/RITAL-IR-project/FORK_CHANGES.md)
 
 What changed:
 
@@ -684,3 +755,67 @@ Relevant files:
 
 - [artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/judge_summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/judge_summary.md)
 - [artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/swapped_order_agreement.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/final_judge_import/mix_q30_judge_gpt54_mini_from_batch_graph/swapped_order_agreement.md)
+
+## Retrieval Improvement Documentation
+
+### 2026-05-21
+
+Added a repository-level explainer documenting the retrieval improvements already implemented in the active HiRAG path, with intuition, implementation details, and formulas.
+
+What changed:
+
+- Added a new `docs/` note that distinguishes:
+  - direct retrieval changes in `src/hirag`
+  - supporting evaluation and community-balance work
+- Summarized the implemented retrieval variants:
+  - query-weighted bridge paths
+  - minmax and budgeted minmax bridge search
+  - FastEmbed late-interaction local reranking
+  - query-focused source snippets
+- Documented the mathematical objectives behind:
+  - dense retrieval
+  - late interaction reranking
+  - weighted shortest path
+  - minmax path search
+  - normalized entropy and BIC-based clustering support
+
+Why this matters:
+
+- gives teammates a single accurate reference for what this fork changed to improve retrieval
+- ties the narrative directly to the active runtime code instead of the inactive scaffold path
+
+Relevant files:
+
+- [docs/RETRIEVAL_IMPROVEMENTS_IMPLEMENTED.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/docs/RETRIEVAL_IMPROVEMENTS_IMPLEMENTED.md)
+- [FORK_CHANGES.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/FORK_CHANGES.md)
+
+## MCTS Bridge Design Note
+
+### 2026-05-21
+
+Added a follow-on design note covering how Monte Carlo Tree Search could be added as an experimental bridge-retrieval strategy on top of the current weighted/minmax HiRAG fork.
+
+What changed:
+
+- Added a new `docs/` note explaining:
+  - why MCTS could outperform weighted/minmax bridge search on hard multi-hop queries
+  - what problem formulation makes sense in this repo
+  - which reward terms, states, actions, and terminal conditions to use
+  - which practical controls are needed so MCTS does not explode at query time
+- Proposed concrete implementation choices for:
+  - candidate-subgraph pruning
+  - UCT/PUCT selection
+  - progressive widening
+  - heuristic rollouts
+  - fallback to existing weighted paths
+- Recommended explicit experimental modes such as `hi_mcts` and `hi_rerank_mcts`
+
+Why this matters:
+
+- gives the team a realistic path for trying MCTS without hand-wavy RL framing
+- keeps the proposal grounded in the current active retrieval code and benchmark harness
+
+Relevant files:
+
+- [docs/MCTS_BRIDGE_RETRIEVAL_IDEAS.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/docs/MCTS_BRIDGE_RETRIEVAL_IDEAS.md)
+- [FORK_CHANGES.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/FORK_CHANGES.md)

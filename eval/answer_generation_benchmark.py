@@ -69,6 +69,10 @@ def existing_keys(path: Path) -> set[tuple[str, str]]:
 
 
 def compact_debug(debug: dict[str, Any]) -> dict[str, Any]:
+    decisions = debug.get("bridge_path_decisions", []) or []
+    mcts_steps = [
+        item for item in decisions if str(item.get("decision", "")).startswith("mcts")
+    ]
     return {
         "bridge_strategy": debug.get("bridge_strategy"),
         "local_rerank_strategy": debug.get("local_rerank_strategy"),
@@ -80,6 +84,22 @@ def compact_debug(debug: dict[str, Any]) -> dict[str, Any]:
         "max_edge_cost": debug.get("max_edge_cost"),
         "bridge_budget_fallbacks": debug.get("bridge_budget_fallbacks", 0),
         "bridge_budget_stopped": debug.get("bridge_budget_stopped", False),
+        "mcts_segments": len(mcts_steps),
+        "mcts_used_weighted_fallback": any(
+            item.get("decision") == "mcts_weighted_fallback" for item in mcts_steps
+        ),
+        "mcts_iterations": sum(int(item.get("iterations", 0) or 0) for item in mcts_steps),
+        "mcts_successful_rollouts": sum(
+            int(item.get("successful_rollouts", 0) or 0) for item in mcts_steps
+        ),
+        "mcts_candidate_nodes_max": max(
+            [int(item.get("candidate_nodes", 0) or 0) for item in mcts_steps],
+            default=0,
+        ),
+        "mcts_candidate_edges_max": max(
+            [int(item.get("candidate_edges", 0) or 0) for item in mcts_steps],
+            default=0,
+        ),
     }
 
 

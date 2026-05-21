@@ -10,6 +10,7 @@ from hirag import HiRAG, QueryParam
 from hirag._op import (
     _find_path_with_required_nodes,
     _load_edge_embedding_disk_cache,
+    _mcts_config_from_query,
     _minmax_path,
     _minmax_budgeted_path,
     _ordered_unique,
@@ -47,12 +48,14 @@ class RetrievalExperimentTests(unittest.TestCase):
             rerank = graph._resolve_query_param(QueryParam(mode="hi_rerank"))
             both = graph._resolve_query_param(QueryParam(mode="hi_rerank_weighted"))
             budgeted = graph._resolve_query_param(QueryParam(mode="hi_minmax_budgeted"))
+            mcts = graph._resolve_query_param(QueryParam(mode="hi_mcts"))
 
         self.assertEqual(weighted.bridge_strategy, "query_weighted")
         self.assertEqual(rerank.local_rerank_strategy, "fastembed_late_interaction")
         self.assertEqual(both.bridge_strategy, "query_weighted")
         self.assertEqual(both.local_rerank_strategy, "fastembed_late_interaction")
         self.assertEqual(budgeted.bridge_strategy, "minmax_budgeted")
+        self.assertEqual(mcts.bridge_strategy, "mcts")
 
     def test_ordered_unique_preserves_retrieval_order(self) -> None:
         self.assertEqual(_ordered_unique(["B", "A", "B", "C", "A"]), ["B", "A", "C"])
@@ -111,6 +114,59 @@ class RetrievalExperimentTests(unittest.TestCase):
         path, decision = _minmax_budgeted_path(graph, "A", "D", costs, param)
         self.assertEqual(path, ["A", "B", "D"])
         self.assertEqual(decision, "minmax_budgeted")
+
+    def test_mcts_prefers_weighted_candidate_region(self) -> None:
+        graph = nx.Graph()
+        graph.add_edges_from(
+            [
+                ("A", "B"),
+                ("B", "D"),
+                ("A", "C"),
+                ("C", "E"),
+                ("E", "D"),
+            ]
+        )
+        storage = NetworkXStorage(namespace="demo", global_config={"working_dir": tempfile.mkdtemp()})
+        storage._graph = graph
+        costs = {
+            tuple(sorted(("A", "B"))): {"cost": 9.0},
+            tuple(sorted(("B", "D"))): {"cost": 9.0},
+            tuple(sorted(("A", "C"))): {"cost": 0.1},
+            tuple(sorted(("C", "E"))): {"cost": 0.1},
+            tuple(sorted(("E", "D"))): {"cost": 0.1},
+        }
+        param = QueryParam(
+            bridge_strategy="mcts",
+            bridge_max_path_edges=4,
+            mcts_max_iterations=64,
+        )
+        path, decisions = asyncio.run(
+            _find_path_with_required_nodes(
+                storage,
+                ["A", "D"],
+                param,
+                costs,
+            )
+        )
+        self.assertEqual(path, ["A", "C", "E", "D"])
+        self.assertIn(decisions[0]["decision"], {"mcts", "mcts_weighted_fallback"})
+        self.assertEqual(decisions[0]["candidate_nodes"], 5)
+
+    def test_mcts_config_uses_bridge_budget_fields(self) -> None:
+        config = _mcts_config_from_query(
+            QueryParam(
+                bridge_max_path_edges=9,
+                max_token_for_bridge_knowledge=321,
+                bridge_length_penalty=0.07,
+                mcts_token_penalty=0.2,
+                mcts_target_reward=1.5,
+            )
+        )
+        self.assertEqual(config.max_path_edges, 9)
+        self.assertEqual(config.max_token_budget, 321)
+        self.assertEqual(config.length_penalty, 0.07)
+        self.assertEqual(config.token_penalty, 0.2)
+        self.assertEqual(config.target_reward, 1.5)
 
     def test_edge_embedding_cache_roundtrip(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

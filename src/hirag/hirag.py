@@ -274,6 +274,8 @@ class HiRAG:
             param.bridge_strategy = "minmax"
         elif param.mode == "hi_minmax_budgeted":
             param.bridge_strategy = "minmax_budgeted"
+        elif param.mode == "hi_mcts":
+            param.bridge_strategy = "mcts"
         elif param.mode == "hi_rerank":
             param.local_rerank_strategy = "fastembed_late_interaction"
         elif param.mode == "hi_rerank_weighted":
@@ -287,7 +289,7 @@ class HiRAG:
         param = self._resolve_query_param(param)
         if param.mode == "naive" and not self.enable_naive_rag:
             raise ValueError("enable_naive_rag is False, cannot query in naive mode")
-        if param.mode in {"hi", "hi_weighted", "hi_minmax", "hi_minmax_budgeted", "hi_rerank", "hi_rerank_weighted"} and not self.enable_hierachical_mode:
+        if param.mode in {"hi", "hi_weighted", "hi_minmax", "hi_minmax_budgeted", "hi_mcts", "hi_rerank", "hi_rerank_weighted"} and not self.enable_hierachical_mode:
             raise ValueError(f"enable_hierachical_mode is False, cannot query in {param.mode} mode")
         if param.mode == "hi_nobridge" and not self.enable_hierachical_mode:
             raise ValueError("enable_hierachical_mode is False, cannot query in hierarchical_nobridge mode")
@@ -298,7 +300,7 @@ class HiRAG:
         if param.mode == "hi_global" and not self.enable_hierachical_mode:
             raise ValueError("enable_hierachical_mode is False, cannot query in hierarchical_global mode")
 
-        if param.mode in {"hi", "hi_weighted", "hi_minmax", "hi_minmax_budgeted", "hi_rerank", "hi_rerank_weighted"}:  # retrieve with hierarchical knowledge
+        if param.mode in {"hi", "hi_weighted", "hi_minmax", "hi_minmax_budgeted", "hi_mcts", "hi_rerank", "hi_rerank_weighted"}:  # retrieve with hierarchical knowledge
             response = await hierarchical_query(
                 query,
                 self.chunk_entity_relation_graph,

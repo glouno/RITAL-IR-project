@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
+from types import SimpleNamespace
 
 from eval.answer_generation_benchmark import compact_debug, existing_keys
 from eval.build_human_annotation_packet import (
@@ -14,7 +15,9 @@ from eval.build_human_annotation_packet import (
 from eval.eval_utils import (
     batch_custom_id,
     build_answer_messages,
+    build_context_with_budget,
     estimate_chat_tokens,
+    make_query_param,
 )
 from eval.export_openai_batch_requests import request_body
 from eval.export_openai_judge_batch_requests import judge_custom_id
@@ -54,6 +57,83 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
         self.assertEqual(debug["bridge_strategy"], "minmax_budgeted")
         self.assertEqual(debug["local_entity_count"], 2)
         self.assertTrue(debug["bridge_budget_stopped"])
+
+        mcts_debug = compact_debug(
+            {
+                "bridge_strategy": "mcts",
+                "bridge_path_decisions": [
+                    {
+                        "decision": "mcts",
+                        "iterations": 32,
+                        "successful_rollouts": 6,
+                        "candidate_nodes": 41,
+                        "candidate_edges": 58,
+                    },
+                    {
+                        "decision": "mcts_weighted_fallback",
+                        "iterations": 12,
+                        "successful_rollouts": 0,
+                        "candidate_nodes": 15,
+                        "candidate_edges": 16,
+                    },
+                ],
+            }
+        )
+        self.assertEqual(mcts_debug["mcts_segments"], 2)
+        self.assertEqual(mcts_debug["mcts_iterations"], 44)
+        self.assertEqual(mcts_debug["mcts_successful_rollouts"], 6)
+        self.assertEqual(mcts_debug["mcts_candidate_nodes_max"], 41)
+        self.assertTrue(mcts_debug["mcts_used_weighted_fallback"])
+
+    def test_hi_mcts_query_param_and_budget_loop(self) -> None:
+        args = SimpleNamespace(
+            top_k=12,
+            top_m=6,
+            response_type="Multiple Paragraphs",
+            min_section_budget=100,
+            max_token_for_local_context=1000,
+            max_token_for_bridge_knowledge=900,
+            max_token_for_community_report=800,
+            max_token_for_text_unit=700,
+            text_unit_snippet_chars=1200,
+            text_unit_snippet_strategy="query_overlap",
+            max_budget_attempts=3,
+            budget_shrink_factor=0.5,
+            max_input_tokens=400,
+        )
+        param = make_query_param("hi_mcts", args, only_need_context=True)
+        self.assertEqual(param.mode, "hi_mcts")
+        self.assertTrue(param.only_need_context)
+
+        class _FakeGraph:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def query(self, query, param):
+                self.calls += 1
+                param.debug_info["bridge_strategy"] = "mcts"
+                param.debug_info["bridge_path_decisions"] = [
+                    {
+                        "decision": "mcts",
+                        "iterations": 9,
+                        "successful_rollouts": 2,
+                        "candidate_nodes": 8,
+                        "candidate_edges": 11,
+                    }
+                ]
+                size = 1200 if self.calls == 1 else 10
+                return "context " * size
+
+        context, final_param, budget_debug = build_context_with_budget(
+            _FakeGraph(),
+            "Why bridge?",
+            "hi_mcts",
+            args,
+        )
+        self.assertLessEqual(budget_debug["context_input_tokens"], args.max_input_tokens)
+        self.assertEqual(final_param.mode, "hi_mcts")
+        self.assertEqual(final_param.debug_info["bridge_strategy"], "mcts")
+        self.assertIn("context", context)
 
     def test_pairwise_prompt_parser_and_summary(self) -> None:
         prompt = build_prompt("What is soil health?", "A", "B")

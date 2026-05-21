@@ -726,3 +726,68 @@ Relevant files:
 - [artifacts/agriculture_graphs_2026-04-23/final_evaluation/full_q30_judge_summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/final_evaluation/full_q30_judge_summary.md)
 - [artifacts/agriculture_graphs_2026-04-23/final_evaluation/swapped_order_agreement.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/final_evaluation/swapped_order_agreement.md)
 - [artifacts/final_project_presentation_notes_2026-05-11.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/final_project_presentation_notes_2026-05-11.md)
+
+## Full OpenAI Batch HiRAG Run Preparation
+
+### 2026-05-21
+
+Prepared the tooling needed to rerun Agriculture and Mix with a homogeneous
+OpenAI Batch pipeline instead of the local vLLM-constrained path.
+
+What changed:
+
+- Added generic retry-request export for OpenAI Batch rows with API errors,
+  HTTP errors, or `finish_reason=length`.
+- Added Batch exporters/importers for:
+  - cluster summaries
+  - community reports
+- Added a graph application step that inserts parsed cluster-summary entities
+  and relations back into GraphML before final community reporting.
+- Extended workdir materialization so final runs can:
+  - consume imported LLM community reports instead of extractive reports
+  - use OpenAI embeddings through `text-embedding-3-small`
+  - consume precomputed Batch embedding JSONL files and write `NanoVectorDB`
+    stores directly
+  - preserve existing cluster annotations with `--skip-clustering`
+- Added Batch exporters/importers for `text-embedding-3-small` embeddings.
+- Added a cost-summary utility for collecting Batch usage across a run folder.
+- Added a full OpenAI HiRAG runbook with Phase 1 Agriculture/Mix commands,
+  token caps, screen launch patterns, retry policy, and Go/No-Go criteria before
+  CS/Legal.
+
+Validation:
+
+- `uv run pytest tests/test_openai_index_batch.py`
+- `uv run python -m py_compile` on the new Batch/materialization scripts
+- `--help` smoke checks for the new CLI scripts
+
+Relevant files:
+
+- [docs/OPENAI_FULL_HIRAG_RUNBOOK.md](/home/paulbeglin/projects/RITAL-IR-project/docs/OPENAI_FULL_HIRAG_RUNBOOK.md)
+- [eval/export_openai_batch_retry_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_retry_requests.py)
+- [eval/export_openai_index_cluster_summary_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_index_cluster_summary_batch.py)
+- [eval/export_openai_index_community_report_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_index_community_report_batch.py)
+- [eval/materialize_openai_index_hirag_workdir.py](/home/paulbeglin/projects/RITAL-IR-project/eval/materialize_openai_index_hirag_workdir.py)
+
+## Dynamic Graph Traversal Extension Note
+
+### 2026-05-21
+
+Documented a proposed next research extension for controlled dynamic graph
+traversal on top of `hi_rerank_weighted`.
+
+What changed:
+
+- Summarized the current local/global/bridge retrieval hyperparameters.
+- Clarified that local retrieval uses vector seed entities plus one-hop graph
+  evidence, not a configurable graph radius.
+- Described a Level 2 dynamic community traversal design with typed tools and
+  budgeted community selection.
+- Described a Level 3 agentic graph traversal design with constrained graph
+  tools instead of free-form Cypher.
+- Recommended dynamic community and path selection as the most defensible next
+  improvement after the full OpenAI Batch reruns.
+
+Relevant file:
+
+- [docs/DYNAMIC_GRAPH_TRAVERSAL_EXTENSION.md](/home/paulbeglin/projects/RITAL-IR-project/docs/DYNAMIC_GRAPH_TRAVERSAL_EXTENSION.md)

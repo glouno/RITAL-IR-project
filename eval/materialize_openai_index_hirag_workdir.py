@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 import networkx as nx
+from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -27,6 +28,7 @@ if str(REPO_ROOT) not in sys.path:
 from hirag._op import get_chunks
 from hirag._storage import NanoVectorDBStorage, NetworkXStorage
 from hirag._utils import compute_mdhash_id
+from hirag._llm import openai_embedding
 
 
 MAIN_SPEC = importlib.util.spec_from_file_location("hirag_repo_main", REPO_ROOT / "main.py")
@@ -48,6 +50,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--chunk-overlap-token-size", type=int, default=100)
     parser.add_argument("--max-graph-cluster-size", type=int, default=10)
     parser.add_argument("--graph-cluster-seed", type=int, default=0xDEADBEEF)
+    parser.add_argument("--skip-clustering", action="store_true", help="Keep existing GraphML cluster annotations.")
+    parser.add_argument("--community-reports-json", default=None)
+    parser.add_argument("--embedding-provider", choices=["fastembed", "openai", "precomputed"], default="fastembed")
+    parser.add_argument("--entity-embeddings-jsonl", default=None)
+    parser.add_argument("--chunk-embeddings-jsonl", default=None)
     parser.add_argument("--embed-model", default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
     parser.add_argument("--embed-dim", type=int, default=384)
     parser.add_argument("--max-token-size", type=int, default=8192)
@@ -186,18 +193,34 @@ async def write_vector_stores(
     args: argparse.Namespace,
     output_dir: Path,
 ) -> None:
-    if args.fastembed_cache_path:
+    if args.embedding_provider == "precomputed":
+        write_precomputed_vector_stores(graph, chunks, args, output_dir)
+        return
+    if args.embedding_provider == "openai":
+        embedding_func = openai_embedding
+    elif args.fastembed_cache_path:
         Path(args.fastembed_cache_path).mkdir(parents=True, exist_ok=True)
-    embedding_func = REPO_MAIN.create_fastembed_embedding(
-        {
-            "embed_model": args.embed_model,
-            "embed_dim": args.embed_dim,
-            "max_token_size": args.max_token_size,
-            "fastembed_threads": args.fastembed_threads,
-            "fastembed_parallel": args.fastembed_parallel,
-            "fastembed_cache_path": args.fastembed_cache_path,
-        }
-    )
+        embedding_func = REPO_MAIN.create_fastembed_embedding(
+            {
+                "embed_model": args.embed_model,
+                "embed_dim": args.embed_dim,
+                "max_token_size": args.max_token_size,
+                "fastembed_threads": args.fastembed_threads,
+                "fastembed_parallel": args.fastembed_parallel,
+                "fastembed_cache_path": args.fastembed_cache_path,
+            }
+        )
+    else:
+        embedding_func = REPO_MAIN.create_fastembed_embedding(
+            {
+                "embed_model": args.embed_model,
+                "embed_dim": args.embed_dim,
+                "max_token_size": args.max_token_size,
+                "fastembed_threads": args.fastembed_threads,
+                "fastembed_parallel": args.fastembed_parallel,
+                "fastembed_cache_path": args.fastembed_cache_path,
+            }
+        )
     config = storage_config(args, output_dir)
     entities_vdb = NanoVectorDBStorage(
         namespace="entities",
@@ -224,6 +247,72 @@ async def write_vector_stores(
     await chunks_vdb.index_done_callback()
 
 
+def load_precomputed_embeddings(path: str | None, namespace: str) -> dict[str, dict[str, Any]]:
+    if not path:
+        raise ValueError(f"--{namespace[:-1]}-embeddings-jsonl is required for --embedding-provider precomputed")
+    rows: dict[str, dict[str, Any]] = {}
+    with Path(path).open("r", encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if row.get("error"):
+                continue
+            if row.get("namespace") != namespace:
+                continue
+            if not row.get("id") or row.get("embedding") is None:
+                continue
+            rows[str(row["id"])] = row
+    return rows
+
+
+def write_precomputed_namespace(
+    output_dir: Path,
+    namespace: str,
+    rows: list[dict[str, Any]],
+    embedding_dim: int,
+) -> None:
+    from nano_vectordb import NanoVectorDB
+
+    vdb = NanoVectorDB(embedding_dim, storage_file=str(output_dir / f"vdb_{namespace}.json"))
+    vdb.upsert(datas=rows)
+    vdb.save()
+
+
+def write_precomputed_vector_stores(
+    graph: nx.Graph,
+    chunks: dict[str, dict[str, Any]],
+    args: argparse.Namespace,
+    output_dir: Path,
+) -> None:
+    import numpy as np
+
+    entity_embeddings = load_precomputed_embeddings(args.entity_embeddings_jsonl, "entities")
+    chunk_embeddings = load_precomputed_embeddings(args.chunk_embeddings_jsonl, "chunks")
+    entity_rows = []
+    for node_id, _data in graph.nodes(data=True):
+        row_id = compute_mdhash_id(str(node_id), prefix="ent-")
+        source = entity_embeddings.get(row_id)
+        if source is None:
+            raise ValueError(f"Missing precomputed entity embedding for {row_id} ({node_id})")
+        entity_rows.append(
+            {
+                "__id__": row_id,
+                "entity_name": str(node_id),
+                "__vector__": np.array(source["embedding"], dtype=np.float32),
+            }
+        )
+    chunk_rows = []
+    for chunk_id in chunks:
+        source = chunk_embeddings.get(chunk_id)
+        if source is None:
+            raise ValueError(f"Missing precomputed chunk embedding for {chunk_id}")
+        chunk_rows.append({"__id__": chunk_id, "__vector__": np.array(source["embedding"], dtype=np.float32)})
+    embedding_dim = len(entity_rows[0]["__vector__"]) if entity_rows else len(chunk_rows[0]["__vector__"])
+    write_precomputed_namespace(output_dir, "entities", entity_rows, embedding_dim)
+    write_precomputed_namespace(output_dir, "chunks", chunk_rows, embedding_dim)
+
+
 def write_json(path: Path, data: Any) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -234,6 +323,8 @@ def write_summary(
     chunks: dict[str, Any],
     graph: nx.Graph,
     reports: dict[str, Any],
+    report_mode: str,
+    embedding_provider: str,
 ) -> None:
     clustered_nodes = sum(1 for _node, data in graph.nodes(data=True) if data.get("clusters"))
     levels = Counter()
@@ -248,11 +339,12 @@ def write_summary(
         "clustered_nodes": clustered_nodes,
         "community_reports": len(reports),
         "community_levels": dict(sorted(levels.items())),
-        "community_report_mode": "extractive_from_batch_graph",
+        "community_report_mode": report_mode,
+        "embedding_provider": embedding_provider,
     }
     write_json(output_dir / "materialization_summary.json", summary)
     lines = [
-        "# Mix HiRAG Workdir Materialization",
+        "# HiRAG Workdir Materialization",
         "",
         f"- working dir: `{output_dir}`",
         f"- docs: {summary['docs']}",
@@ -262,6 +354,7 @@ def write_summary(
         f"- clustered nodes: {summary['clustered_nodes']}",
         f"- community reports: {summary['community_reports']}",
         f"- community report mode: `{summary['community_report_mode']}`",
+        f"- embedding provider: `{summary['embedding_provider']}`",
     ]
     (output_dir / "materialization_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -282,19 +375,26 @@ async def amain() -> None:
         chunk_overlap_token_size=args.chunk_overlap_token_size,
     )
     graph = nx.read_graphml(args.graphml)
-    graph = await cluster_graph(graph, args, output_dir)
-    reports = await build_extractive_community_reports(graph, args, output_dir)
+    if not args.skip_clustering:
+        graph = await cluster_graph(graph, args, output_dir)
+    if args.community_reports_json:
+        reports = json.loads(Path(args.community_reports_json).read_text(encoding="utf-8"))
+        report_mode = "llm_batch"
+    else:
+        reports = await build_extractive_community_reports(graph, args, output_dir)
+        report_mode = "extractive_from_batch_graph"
 
     write_json(output_dir / "kv_store_full_docs.json", docs)
     write_json(output_dir / "kv_store_text_chunks.json", chunks)
     write_json(output_dir / "kv_store_community_reports.json", reports)
     nx.write_graphml(graph, output_dir / "graph_chunk_entity_relation.graphml")
     await write_vector_stores(graph, chunks, args, output_dir)
-    write_summary(output_dir, docs, chunks, graph, reports)
+    write_summary(output_dir, docs, chunks, graph, reports, report_mode, args.embedding_provider)
     print(f"Wrote runnable HiRAG workdir to {output_dir}")
 
 
 def main() -> None:
+    load_dotenv()
     asyncio.run(amain())
 
 

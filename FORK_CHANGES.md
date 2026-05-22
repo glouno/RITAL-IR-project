@@ -877,3 +877,36 @@ Relevant files:
 
 - [eval/run_openai_requests_file_direct.py](/home/paulbeglin/projects/RITAL-IR-project/eval/run_openai_requests_file_direct.py)
 - [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)
+
+## Full OpenAI Graph Finalization Hardening
+
+### 2026-05-22
+
+Hardened the final OpenAI-only Agriculture/Mix graph path while running the
+full rerun.
+
+What changed:
+
+- Community report import now rejects malformed report JSON where `findings` is
+  not a usable list, preventing broken `report_string` artifacts from being
+  treated as successful reports.
+- Added support for `--embedding-provider openai` in answer-context export so
+  query-time retrieval can use the same OpenAI embedding space as the final
+  `text-embedding-3-small` vector stores.
+- Hardened HiRAG text-unit selection to skip missing chunk references instead
+  of crashing during final graph retrieval.
+- Added a persistent run report with costs, retry history, final graph counts,
+  and current answer-screen explanation.
+
+Validation:
+
+- `uv run pytest tests/test_openai_index_batch.py`
+- Smoke export of `hi` + `naive` answer contexts against the final Mix workdir.
+
+Relevant files:
+
+- [eval/import_openai_index_community_report_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_index_community_report_batch.py)
+- [eval/eval_utils.py](/home/paulbeglin/projects/RITAL-IR-project/eval/eval_utils.py)
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)
+- [artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md)

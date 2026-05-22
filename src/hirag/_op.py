@@ -1335,10 +1335,12 @@ async def _find_most_related_text_unit_from_entities(
                 "order": index,
                 "relation_counts": relation_counts,     # count of relations related to the chunk
             }
-    if any([v is None for v in all_text_units_lookup.values()]):
+    if any([v is None or v.get("data") is None for v in all_text_units_lookup.values()]):
         logger.warning("Text chunks are missing, maybe the storage is damaged")
     all_text_units = [
-        {"id": k, **v} for k, v in all_text_units_lookup.items() if v is not None
+        {"id": k, **v}
+        for k, v in all_text_units_lookup.items()
+        if v is not None and v.get("data") is not None
     ]
     all_text_units = sorted(        # sort by relation counts
         all_text_units, key=lambda x: (x["order"], -x["relation_counts"])

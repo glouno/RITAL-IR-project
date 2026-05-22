@@ -42,6 +42,7 @@ from eval.apply_openai_index_cluster_summaries import apply_summaries
 from eval.export_openai_embedding_batch import entity_items, request_body as embedding_request_body
 from eval.import_openai_embedding_batch import convert_rows as convert_embedding_rows
 from eval.materialize_openai_index_hirag_workdir import write_precomputed_vector_stores
+from eval.eval_utils import add_runtime_args
 from hirag.regimes import resolve_prompts
 
 
@@ -698,6 +699,15 @@ class OpenAIIndexBatchTests(unittest.TestCase):
         self.assertEqual(entities_vdb["embedding_dim"], 3)
         self.assertEqual(chunks_vdb["embedding_dim"], 3)
         self.assertEqual(entities_vdb["data"][0]["entity_name"], '"COMPOST"')
+
+    def test_runtime_args_accept_openai_embedding_provider(self) -> None:
+        import argparse
+
+        parser = argparse.ArgumentParser()
+        add_runtime_args(parser)
+        args = parser.parse_args(["--embedding-provider", "openai", "--embed-dim", "1536"])
+        self.assertEqual(args.embedding_provider, "openai")
+        self.assertEqual(args.embed_dim, 1536)
 
 
 if __name__ == "__main__":

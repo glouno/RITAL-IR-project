@@ -846,3 +846,34 @@ Relevant files:
 
 - [artifacts/RUNS_INDEX_2026-05-21.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/RUNS_INDEX_2026-05-21.md)
 - [artifacts/openai_full_hirag_2026-05/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/README.md)
+
+## Direct API Micro-Retry Helper
+
+### 2026-05-22
+
+Added a secondary live-API execution path for tiny OpenAI retry files while
+keeping Batch API as the primary long-run path.
+
+What changed:
+
+- Added `eval/run_openai_requests_file_direct.py`, which reads Batch-style
+  JSONL requests and calls the normal OpenAI API directly for:
+  - `/v1/chat/completions`
+  - `/v1/embeddings`
+- The helper writes Batch-compatible output JSONL so existing importers can
+  parse direct results without special-case code.
+- Added endpoint guardrails to reject mixed or unsupported request files.
+- Added tests for direct chat dispatch, embedding dispatch, and endpoint
+  validation.
+
+Why this matters:
+
+- For micro-retries with only a handful of rows, direct API can avoid waiting
+  for Batch scheduling/finalization.
+- The full Agriculture/Mix rerun still uses Batch as the default path for
+  substantial stages and cost efficiency.
+
+Relevant files:
+
+- [eval/run_openai_requests_file_direct.py](/home/paulbeglin/projects/RITAL-IR-project/eval/run_openai_requests_file_direct.py)
+- [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)

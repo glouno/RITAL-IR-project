@@ -74,6 +74,35 @@ screen -r <session_name>
 tail -f <RESULT_DIR>/batch_run_manifest.json
 ```
 
+## Optional Direct API Micro-Retries
+
+Batch remains the default path for cost and reproducibility. For very small
+retry files, for example fewer than 10 rows, the live API helper can avoid
+waiting for Batch scheduling while preserving the same request body and output
+shape used by the Batch importers.
+
+Validate the file first:
+
+```bash
+uv run python eval/run_openai_requests_file_direct.py \
+  --batch-file <RETRY_REQUESTS.jsonl> \
+  --validate-only
+```
+
+Run direct API calls:
+
+```bash
+uv run python eval/run_openai_requests_file_direct.py \
+  --batch-file <RETRY_REQUESTS.jsonl> \
+  --output-file <DIRECT_OUTPUT.jsonl> \
+  --overwrite
+```
+
+The resulting `<DIRECT_OUTPUT.jsonl>` can be passed to the same importer as a
+normal Batch output file. Use this only as a secondary convenience path for
+micro-retries; keep large extraction, summary, report, answer, judge, and
+embedding stages on Batch.
+
 ## Phase 1 Commands
 
 Set variables:

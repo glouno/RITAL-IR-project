@@ -33,6 +33,7 @@ from eval.import_openai_index_relation_batch import (
 )
 from eval.openai_batch_retry_utils import body_with_completion_cap, is_retryable_batch_row
 from eval.run_openai_batch_file import validate_batch_file
+from eval.run_openai_requests_file_direct import endpoint_for_rows, run_rows
 from eval.export_openai_index_cluster_summary_batch import build_cluster_prompt, graph_clusters
 from eval.import_openai_index_cluster_summary_batch import convert_rows as convert_cluster_rows
 from eval.import_openai_index_community_report_batch import convert_rows as convert_report_rows
@@ -518,6 +519,76 @@ class OpenAIIndexBatchTests(unittest.TestCase):
                 validate_batch_file(batch_file, endpoint="/v1/chat/completions")
             stats = validate_batch_file(batch_file, endpoint="/v1/embeddings")
         self.assertEqual(stats["urls"], ["/v1/embeddings"])
+
+    def test_direct_runner_dispatches_chat_batch_rows(self) -> None:
+        class FakeCompletions:
+            def __init__(self) -> None:
+                self.calls = []
+
+            def create(self, **body):
+                self.calls.append(body)
+                return {
+                    "id": "chatcmpl-test",
+                    "choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                }
+
+        class FakeClient:
+            def __init__(self) -> None:
+                self.chat = Namespace(completions=FakeCompletions())
+                self.embeddings = Namespace(create=lambda **_: None)
+
+        rows = [
+            {
+                "custom_id": "row-1",
+                "url": "/v1/chat/completions",
+                "body": {"model": "gpt-5.4-mini", "messages": [{"role": "user", "content": "Hi"}]},
+            }
+        ]
+        client = FakeClient()
+        output = run_rows(client, rows, "/v1/chat/completions")
+        self.assertEqual(client.chat.completions.calls[0]["model"], "gpt-5.4-mini")
+        self.assertEqual(output[0]["custom_id"], "row-1")
+        self.assertEqual(output[0]["response"]["status_code"], 200)
+        self.assertIsNone(output[0]["error"])
+
+    def test_direct_runner_dispatches_embedding_batch_rows(self) -> None:
+        class FakeEmbeddings:
+            def __init__(self) -> None:
+                self.calls = []
+
+            def create(self, **body):
+                self.calls.append(body)
+                return {"data": [{"embedding": [0.1, 0.2]}], "usage": {"total_tokens": 2}}
+
+        class FakeClient:
+            def __init__(self) -> None:
+                self.chat = Namespace(completions=Namespace(create=lambda **_: None))
+                self.embeddings = FakeEmbeddings()
+
+        rows = [
+            {
+                "custom_id": "embedding|chunks|chunk-1",
+                "url": "/v1/embeddings",
+                "body": {"model": "text-embedding-3-small", "input": "Compost"},
+            }
+        ]
+        client = FakeClient()
+        output = run_rows(client, rows, "/v1/embeddings")
+        self.assertEqual(client.embeddings.calls[0]["input"], "Compost")
+        self.assertEqual(output[0]["response"]["body"]["data"][0]["embedding"], [0.1, 0.2])
+
+    def test_direct_runner_rejects_mixed_or_unsupported_endpoints(self) -> None:
+        with self.assertRaisesRegex(ValueError, "exactly one endpoint"):
+            endpoint_for_rows(
+                [
+                    {"url": "/v1/chat/completions"},
+                    {"url": "/v1/embeddings"},
+                ],
+                None,
+            )
+        with self.assertRaisesRegex(ValueError, "unsupported endpoint"):
+            endpoint_for_rows([{"url": "/v1/responses"}], None)
 
     def test_import_embedding_batch_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

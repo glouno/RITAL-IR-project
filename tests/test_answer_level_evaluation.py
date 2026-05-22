@@ -21,6 +21,7 @@ from eval.eval_utils import (
     make_query_param,
 )
 from eval.export_openai_batch_requests import request_body
+from eval.export_openai_batch_requests import retrieval_trace
 from eval.export_openai_judge_batch_requests import judge_custom_id
 from eval.export_openai_judge_batch_requests import request_body as judge_request_body
 from eval.import_openai_batch_answers import convert_rows as convert_answer_batch_rows
@@ -33,6 +34,7 @@ from eval.pairwise_answer_judge import (
     parse_judge_json,
     write_summary,
 )
+from eval.summarize_retrieval_traces import flatten_trace, summarize
 
 
 class AnswerLevelEvaluationTests(unittest.TestCase):
@@ -262,6 +264,47 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
         self.assertEqual(request["body"]["max_completion_tokens"], 256)
         self.assertNotIn("max_tokens", request["body"])
         self.assertGreater(estimate_chat_tokens(messages), 0)
+
+    def test_retrieval_trace_preserves_path_and_selection_details(self) -> None:
+        row = {
+            "custom_id": "answer|0|hi_rerank_weighted",
+            "query_id": 0,
+            "query": "How does compost affect soil?",
+            "variant": "hi_rerank_weighted",
+            "model": "gpt-5.4-mini",
+            "input_tokens": 100,
+            "context_tokens": 80,
+            "latency_seconds": 1.2,
+            "error": None,
+        }
+        trace = retrieval_trace(
+            row,
+            context="context",
+            debug={
+                "mode": "hi_rerank_weighted",
+                "bridge_strategy": "query_weighted",
+                "local_rerank_strategy": "fastembed_late_interaction",
+                "local_entities": ["COMPOST", "SOIL"],
+                "communities": [(1, "Soil health")],
+                "bridge_edges": [{"source": "COMPOST", "target": "SOIL"}],
+                "bridge_path_nodes": 2,
+                "bridge_path_edges": 1,
+                "mean_edge_score": 0.8,
+                "bridge_path_decisions": [
+                    {"source": "COMPOST", "target": "SOIL", "decision": "query_weighted"}
+                ],
+            },
+            budget_debug={"context_input_tokens": 100, "context_within_budget": True},
+        )
+        self.assertEqual(trace["retrieval"]["local_entity_count"], 2)
+        self.assertEqual(trace["retrieval"]["community_count"], 1)
+        self.assertEqual(trace["retrieval"]["bridge_path_edges"], 1)
+        self.assertEqual(trace["retrieval"]["bridge_path_decisions"][0]["decision"], "query_weighted")
+
+        flat = flatten_trace(trace)
+        summary = summarize([flat])
+        self.assertEqual(summary["hi_rerank_weighted"]["rows"], 1)
+        self.assertEqual(summary["hi_rerank_weighted"]["mean_bridge_path_edges"], 1)
 
     def test_openai_answer_batch_import(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

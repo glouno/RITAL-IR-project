@@ -1,0 +1,5 @@
+dataset,variant_vs_hi,valid_comparisons,wins,losses,ties,raw_win_rate,query_pairs,swapped_order_agreement_rate,strict_variant_win_rate,agreed_variant_wins,agreed_baseline_wins,agreed_ties
+agriculture,hi_minmax_budgeted,60,30,30,0,0.5,30,0.4,0.2,6,6,0
+agriculture,hi_rerank_weighted,60,35,25,0,0.5833333333333334,30,0.7666666666666667,0.4666666666666667,14,9,0
+mix,hi_minmax_budgeted,60,17,40,3,0.2833333333333333,30,0.4666666666666667,0.06666666666666667,2,12,0
+mix,hi_rerank_weighted,60,33,27,0,0.55,30,0.7,0.4,12,9,0

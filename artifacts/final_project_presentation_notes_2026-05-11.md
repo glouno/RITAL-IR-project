@@ -35,24 +35,28 @@ paths, and optional reranking for local entity evidence.
 
 ## Current Evidence
 
-Agriculture is the completed answer-level result set:
+Agriculture is now complete for the final answer-level loop:
 
 - 30 queries x 3 variants = 90 successful GPT-5.4 Mini answers.
-- Partial judge results currently available:
-  - `hi_minmax_budgeted` vs `hi`: 9 wins, 11 losses, 0 ties, win rate 45.0%.
-  - `hi_rerank_weighted` vs `hi`: 15 wins, 11 losses, 0 ties, win rate 57.7%.
+- 120 GPT-5.4 Mini judge rows imported with 0 parse errors.
+- Raw swapped-order judge results:
+  - `hi_minmax_budgeted` vs `hi`: 30 wins, 30 losses, 0 ties, win rate 50.0%.
+  - `hi_rerank_weighted` vs `hi`: 35 wins, 25 losses, 0 ties, win rate 58.3%.
+- Stricter swapped-order agreement:
+  - `hi_minmax_budgeted`: 12/30 query pairs agreed, strict variant win rate 20.0%.
+  - `hi_rerank_weighted`: 23/30 query pairs agreed, strict variant win rate 46.7%.
 - Retrieval proxy improved most for minmax-style bridge selection:
   - `hi`: q50 overlap 0.6285.
   - `hi_minmax`: q50 overlap 0.6677.
   - `hi_weighted`: q50 overlap 0.6455.
 
-Mix is now ready for answer-level evaluation:
+Mix is also complete for the final answer-level loop:
 
 - Batch-indexed relationship graph: 17,575 nodes and 18,588 edges.
 - Materialized queryable workdir: 579 chunks and 2,759 extractive community
   reports.
-- Fresh q30 answer Batch file: 90 requests for `hi`, `hi_minmax_budgeted`, and
-  `hi_rerank_weighted` with GPT-5.4 Mini.
+- 90 successful GPT-5.4 Mini answers.
+- 120 GPT-5.4 Mini judge rows imported with 0 parse errors.
 - Mix q30 judge results are now available:
   - `hi_minmax_budgeted` vs `hi`: raw swapped-order win rate 28.3%.
   - `hi_rerank_weighted` vs `hi`: raw swapped-order win rate 55.0%.
@@ -70,31 +74,24 @@ Mix is now ready for answer-level evaluation:
 4. Weakness found: bridge path relevance and context budget control.
 5. Our changes: weighted bridge retrieval, minmax-budgeted paths, reranking,
    OpenAI Batch indexing/evaluation tooling.
-6. Results: agriculture retrieval proxy and partial judge win rates.
-7. Mix extension: larger cross-domain batch-indexed graph and q30 answer batch
-   ready to submit.
+6. Results: agriculture and Mix q30 answer-level judge tables.
+7. Mix extension: larger cross-domain batch-indexed graph with complete answer
+   and judge evaluation.
 8. Honest limitations: Mix community reports are extractive rather than
    LLM-written in the materialized workdir, and judge swapped-order disagreement
    means we should emphasize `hi_rerank_weighted` as the cleaner Mix signal.
 
-## Next Submission Steps
+## Final Claim
 
-Submit:
+The cleanest final claim is not that every query-aware bridge variant wins. It
+is that HiRAG's bridge retrieval can be improved by making retrieval more
+query-aware, but the practical variant is the one that controls context budget:
+`hi_rerank_weighted`.
 
-- `artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_answer_requests/mix_q30_answers_gpt54_mini_from_batch_graph/answer_requests.jsonl`
+Across Agriculture and Mix, `hi_rerank_weighted` is the only experimental
+variant with positive raw judge win rates on both datasets, stronger
+swapped-order reliability than `hi_minmax_budgeted`, and lower total answer
+token usage than baseline.
 
-After completion:
-
-```bash
-uv run python eval/import_openai_batch_answers.py \
-  --batch-output /path/to/openai_answer_batch_output.jsonl \
-  --contexts artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_answer_requests/mix_q30_answers_gpt54_mini_from_batch_graph/contexts.jsonl \
-  --output-dir artifacts/mix_batch_requests_2026-05-10/final_answer_import
-
-uv run python eval/export_openai_judge_batch_requests.py \
-  --answers artifacts/mix_batch_requests_2026-05-10/final_answer_import/answers.jsonl \
-  --baseline hi \
-  --variants hi_minmax_budgeted hi_rerank_weighted \
-  --model gpt-5.4-mini \
-  --output-dir artifacts/mix_batch_requests_2026-05-10/OpenAI_batch_judge_requests/mix_q30_judge_gpt54_mini_from_batch_graph
-```
+The final consolidated tables are in
+`artifacts/final_analysis_2026-05-21/summary.md`.

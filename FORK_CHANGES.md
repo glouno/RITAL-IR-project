@@ -786,8 +786,8 @@ Why this matters:
 
 Relevant files:
 
-- [docs/RETRIEVAL_IMPROVEMENTS_IMPLEMENTED.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/docs/RETRIEVAL_IMPROVEMENTS_IMPLEMENTED.md)
-- [FORK_CHANGES.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/FORK_CHANGES.md)
+- [docs/RETRIEVAL_IMPROVEMENTS_IMPLEMENTED.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_IMPROVEMENTS_IMPLEMENTED.md)
+- [FORK_CHANGES.md](/home/paulbeglin/projects/RITAL-IR-project/FORK_CHANGES.md)
 
 ## MCTS Bridge Design Note
 
@@ -817,8 +817,170 @@ Why this matters:
 
 Relevant files:
 
-- [docs/MCTS_BRIDGE_RETRIEVAL_IDEAS.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/docs/MCTS_BRIDGE_RETRIEVAL_IDEAS.md)
-- [FORK_CHANGES.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/FORK_CHANGES.md)
+- [docs/MCTS_BRIDGE_RETRIEVAL_IDEAS.md](/home/paulbeglin/projects/RITAL-IR-project/docs/MCTS_BRIDGE_RETRIEVAL_IDEAS.md)
+- [FORK_CHANGES.md](/home/paulbeglin/projects/RITAL-IR-project/FORK_CHANGES.md)
+
+## Final Agriculture Judge Completion And Analysis
+
+### 2026-05-21
+
+Finished the remaining agriculture q30 judge evaluation and consolidated the
+final project results.
+
+What changed:
+
+- Submitted the prepared 74-row missing agriculture judge Batch file with the
+  repo Batch launcher.
+- Imported the completed output and merged it with the earlier 46 imported
+  judge rows into a full 120-row agriculture judge result set.
+- Added full agriculture swapped-order agreement artifacts.
+- Added a final consolidated analysis folder comparing Agriculture and Mix
+  answer-level judge results, strict swapped-order agreement, token cost, graph
+  construction status, and final limitations.
+- Updated the presentation notes to remove stale "pending submission" language
+  and center the final claim around `hi_rerank_weighted`.
+
+Final answer-level judge signal:
+
+- Agriculture:
+  - `hi_minmax_budgeted` vs `hi`: 30 wins, 30 losses, 0 ties, raw win rate 50.0%.
+  - `hi_rerank_weighted` vs `hi`: 35 wins, 25 losses, 0 ties, raw win rate 58.3%.
+- Mix:
+  - `hi_minmax_budgeted` vs `hi`: 17 wins, 40 losses, 3 ties, raw win rate 28.3%.
+  - `hi_rerank_weighted` vs `hi`: 33 wins, 27 losses, 0 ties, raw win rate 55.0%.
+
+Takeaway:
+
+- `hi_rerank_weighted` is the cleaner final improvement: positive raw judge win
+  rate on both final datasets, stronger swapped-order reliability than
+  `hi_minmax_budgeted`, and lower answer-token usage than baseline.
+
+Relevant files:
+
+- [artifacts/final_analysis_2026-05-21/summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/final_analysis_2026-05-21/summary.md)
+- [artifacts/agriculture_graphs_2026-04-23/final_evaluation/full_q30_judge_summary.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/final_evaluation/full_q30_judge_summary.md)
+- [artifacts/agriculture_graphs_2026-04-23/final_evaluation/swapped_order_agreement.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/agriculture_graphs_2026-04-23/final_evaluation/swapped_order_agreement.md)
+- [artifacts/final_project_presentation_notes_2026-05-11.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/final_project_presentation_notes_2026-05-11.md)
+
+## Full OpenAI Batch HiRAG Run Preparation
+
+### 2026-05-21
+
+Prepared the tooling needed to rerun Agriculture and Mix with a homogeneous
+OpenAI Batch pipeline instead of the local vLLM-constrained path.
+
+What changed:
+
+- Added generic retry-request export for OpenAI Batch rows with API errors,
+  HTTP errors, or `finish_reason=length`.
+- Added Batch exporters/importers for:
+  - cluster summaries
+  - community reports
+- Added a graph application step that inserts parsed cluster-summary entities
+  and relations back into GraphML before final community reporting.
+- Extended workdir materialization so final runs can:
+  - consume imported LLM community reports instead of extractive reports
+  - use OpenAI embeddings through `text-embedding-3-small`
+  - consume precomputed Batch embedding JSONL files and write `NanoVectorDB`
+    stores directly
+  - preserve existing cluster annotations with `--skip-clustering`
+- Added Batch exporters/importers for `text-embedding-3-small` embeddings.
+- Added a cost-summary utility for collecting Batch usage across a run folder.
+- Added a full OpenAI HiRAG runbook with Phase 1 Agriculture/Mix commands,
+  token caps, screen launch patterns, retry policy, and Go/No-Go criteria before
+  CS/Legal.
+
+Validation:
+
+- `uv run pytest tests/test_openai_index_batch.py`
+- `uv run python -m py_compile` on the new Batch/materialization scripts
+- `--help` smoke checks for the new CLI scripts
+
+Relevant files:
+
+- [docs/OPENAI_FULL_HIRAG_RUNBOOK.md](/home/paulbeglin/projects/RITAL-IR-project/docs/OPENAI_FULL_HIRAG_RUNBOOK.md)
+- [eval/export_openai_batch_retry_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_retry_requests.py)
+- [eval/export_openai_index_cluster_summary_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_index_cluster_summary_batch.py)
+- [eval/export_openai_index_community_report_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_index_community_report_batch.py)
+- [eval/materialize_openai_index_hirag_workdir.py](/home/paulbeglin/projects/RITAL-IR-project/eval/materialize_openai_index_hirag_workdir.py)
+
+## Dynamic Graph Traversal Extension Note
+
+### 2026-05-21
+
+Documented a proposed next research extension for controlled dynamic graph
+traversal on top of `hi_rerank_weighted`.
+
+What changed:
+
+- Summarized the current local/global/bridge retrieval hyperparameters.
+- Clarified that local retrieval uses vector seed entities plus one-hop graph
+  evidence, not a configurable graph radius.
+- Described a Level 2 dynamic community traversal design with typed tools and
+  budgeted community selection.
+- Described a Level 3 agentic graph traversal design with constrained graph
+  tools instead of free-form Cypher.
+- Recommended dynamic community and path selection as the most defensible next
+  improvement after the full OpenAI Batch reruns.
+
+Relevant file:
+
+- [docs/DYNAMIC_GRAPH_TRAVERSAL_EXTENSION.md](/home/paulbeglin/projects/RITAL-IR-project/docs/DYNAMIC_GRAPH_TRAVERSAL_EXTENSION.md)
+
+## Retrieval Trace Capture For Answer Runs
+
+### 2026-05-21
+
+Extended answer Batch export so final OpenAI answer runs preserve detailed
+retrieval traces for later benchmarking.
+
+What changed:
+
+- `eval/export_openai_batch_requests.py` now writes `retrieval_traces.jsonl`
+  for every query/variant, including selected entities, communities, bridge
+  edges, bridge path decisions, path length metrics, context sections, and
+  budget attempts.
+- Added `eval/summarize_retrieval_traces.py` to produce CSV/JSON/Markdown
+  summaries grouped by retrieval variant.
+- Updated the OpenAI full-run runbook to keep and summarize these traces after
+  answer request export.
+
+Validation:
+
+- `uv run pytest tests/test_answer_level_evaluation.py tests/test_hirag_retrieval_experiments.py tests/test_cluster_balance.py`
+- `uv run python -m py_compile eval/export_openai_batch_requests.py eval/summarize_retrieval_traces.py`
+
+Relevant files:
+
+- [eval/export_openai_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_requests.py)
+- [eval/summarize_retrieval_traces.py](/home/paulbeglin/projects/RITAL-IR-project/eval/summarize_retrieval_traces.py)
+- [docs/OPENAI_FULL_HIRAG_RUNBOOK.md](/home/paulbeglin/projects/RITAL-IR-project/docs/OPENAI_FULL_HIRAG_RUNBOOK.md)
+
+## Run Inventory And Artifact Organization
+
+### 2026-05-21
+
+Added a central run index and a reserved artifact destination for the full
+OpenAI-only HiRAG reruns.
+
+What changed:
+
+- Added `artifacts/RUNS_INDEX_2026-05-21.md` to classify active, final,
+  legacy, superseded, smoke, and cache run folders.
+- Reserved `artifacts/openai_full_hirag_2026-05/` as the clean destination for
+  validated Agriculture and Mix full OpenAI rerun outputs.
+- Updated the shared artifact inventory to point collaborators to the run index
+  and future full OpenAI artifact destination.
+
+Safety note:
+
+- `.runs/openai_full_hirag_2026-05/` remains untouched while the active Batch
+  `screen` sessions are running.
+
+Relevant files:
+
+- [artifacts/RUNS_INDEX_2026-05-21.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/RUNS_INDEX_2026-05-21.md)
+- [artifacts/openai_full_hirag_2026-05/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/README.md)
 
 ## Adaptive MCTS Candidate Radius
 
@@ -850,11 +1012,11 @@ Why this matters:
 
 Relevant files:
 
-- [src/hirag/base.py](/home/bshkatrin/RITAL-IR-project/src/hirag/base.py)
-- [src/hirag/_op.py](/home/bshkatrin/RITAL-IR-project/src/hirag/_op.py)
-- [src/hirag/mcts.py](/home/bshkatrin/RITAL-IR-project/src/hirag/mcts.py)
-- [docs/MCTS_IMPLEMENTATION.md](/home/bshkatrin/RITAL-IR-project/docs/MCTS_IMPLEMENTATION.md)
-- [tests/test_hirag_retrieval_experiments.py](/home/bshkatrin/RITAL-IR-project/tests/test_hirag_retrieval_experiments.py)
+- [src/hirag/base.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/base.py)
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [src/hirag/mcts.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/mcts.py)
+- [docs/MCTS_IMPLEMENTATION.md](/home/paulbeglin/projects/RITAL-IR-project/docs/MCTS_IMPLEMENTATION.md)
+- [tests/test_hirag_retrieval_experiments.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_hirag_retrieval_experiments.py)
 
 ## MCTS Benchmark Debug Expansion
 
@@ -888,5 +1050,168 @@ Why this matters:
 
 Relevant files:
 
-- [eval/answer_generation_benchmark.py](/home/bshkatrin/RITAL-IR-project/eval/answer_generation_benchmark.py)
-- [tests/test_answer_level_evaluation.py](/home/bshkatrin/RITAL-IR-project/tests/test_answer_level_evaluation.py)
+- [eval/answer_generation_benchmark.py](/home/paulbeglin/projects/RITAL-IR-project/eval/answer_generation_benchmark.py)
+- [tests/test_answer_level_evaluation.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_answer_level_evaluation.py)
+
+## Direct API Micro-Retry Helper
+
+### 2026-05-22
+
+Added a secondary live-API execution path for tiny OpenAI retry files while
+keeping Batch API as the primary long-run path.
+
+What changed:
+
+- Added `eval/run_openai_requests_file_direct.py`, which reads Batch-style
+  JSONL requests and calls the normal OpenAI API directly for:
+  - `/v1/chat/completions`
+  - `/v1/embeddings`
+- The helper writes Batch-compatible output JSONL so existing importers can
+  parse direct results without special-case code.
+- Added endpoint guardrails to reject mixed or unsupported request files.
+- Added tests for direct chat dispatch, embedding dispatch, and endpoint
+  validation.
+
+Why this matters:
+
+- For micro-retries with only a handful of rows, direct API can avoid waiting
+  for Batch scheduling/finalization.
+- The full Agriculture/Mix rerun still uses Batch as the default path for
+  substantial stages and cost efficiency.
+
+Relevant files:
+
+- [eval/run_openai_requests_file_direct.py](/home/paulbeglin/projects/RITAL-IR-project/eval/run_openai_requests_file_direct.py)
+- [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)
+
+## Full OpenAI Graph Finalization Hardening
+
+### 2026-05-22
+
+Hardened the final OpenAI-only Agriculture/Mix graph path while running the
+full rerun.
+
+What changed:
+
+- Community report import now rejects malformed report JSON where `findings` is
+  not a usable list, preventing broken `report_string` artifacts from being
+  treated as successful reports.
+- Added support for `--embedding-provider openai` in answer-context export so
+  query-time retrieval can use the same OpenAI embedding space as the final
+  `text-embedding-3-small` vector stores.
+- Hardened HiRAG text-unit selection to skip missing chunk references instead
+  of crashing during final graph retrieval.
+- Added a persistent run report with costs, retry history, final graph counts,
+  and current answer-screen explanation.
+
+Validation:
+
+- `uv run pytest tests/test_openai_index_batch.py`
+- Smoke export of `hi` + `naive` answer contexts against the final Mix workdir.
+
+Relevant files:
+
+- [eval/import_openai_index_community_report_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_index_community_report_batch.py)
+- [eval/eval_utils.py](/home/paulbeglin/projects/RITAL-IR-project/eval/eval_utils.py)
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)
+- [artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md)
+
+## Answer Retrieval Edge-Embedding Batching
+
+### 2026-05-22
+
+Fixed the answer export path for weighted bridge retrieval on full OpenAI
+graphs.
+
+What changed:
+
+- Edge descriptions used by query-weighted bridge retrieval are now truncated
+  to a bounded per-edge embedding text before embedding.
+- Missing edge embeddings are sent to OpenAI embeddings in bounded batches
+  instead of one graph-wide request.
+- Edge embedding caches are written after every successful batch, so long
+  Agriculture exports can resume without losing all completed edge embeddings.
+- Answer request export now prints one progress line per query/variant.
+
+Why this matters:
+
+- The previous implementation could send tens of millions of edge-description
+  tokens in a single embeddings request and hit OpenAI's
+  `max_tokens_per_request` limit.
+- Mix answers now complete end-to-end with weighted bridge retrieval enabled;
+  Agriculture is progressing through the larger incremental edge cache.
+
+Validation:
+
+- `uv run pytest tests/test_hirag_retrieval_experiments.py tests/test_openai_index_batch.py`
+
+Relevant files:
+
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [eval/export_openai_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_requests.py)
+- [tests/test_hirag_retrieval_experiments.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_hirag_retrieval_experiments.py)
+
+## Batch Edge-Embedding Precompute Path
+
+### 2026-05-22
+
+Added an explicit OpenAI Batch avenue for weighted bridge edge embeddings.
+
+What changed:
+
+- Added `eval/export_openai_edge_embedding_batch.py` to export graph edge
+  descriptions as `/v1/embeddings` Batch requests.
+- Added `eval/import_openai_edge_embedding_batch.py` to import Batch outputs
+  into the same edge-cache JSON that runtime HiRAG retrieval reads.
+- Request export shards large edge embedding jobs to respect Batch file limits.
+- Documented when to choose lazy live edge-cache creation versus precomputed
+  Batch edge-cache creation.
+
+Why this matters:
+
+- The lazy live path is safe and works, but hides a large preprocessing step in
+  the first weighted answer retrieval query.
+- The Batch path is cheaper, more reproducible, and better suited for future
+  CS/Legal full reruns.
+
+Validation:
+
+- `uv run pytest tests/test_openai_index_batch.py tests/test_hirag_retrieval_experiments.py`
+
+Relevant files:
+
+- [eval/export_openai_edge_embedding_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_edge_embedding_batch.py)
+- [eval/import_openai_edge_embedding_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_edge_embedding_batch.py)
+- [docs/OPENAI_FULL_HIRAG_RUNBOOK.md](/home/paulbeglin/projects/RITAL-IR-project/docs/OPENAI_FULL_HIRAG_RUNBOOK.md)
+- [artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md)
+
+## Full OpenAI Agriculture/Mix Result Promotion
+
+### 2026-05-22
+
+Promoted the completed Agriculture and Mix OpenAI-only answer/judge outputs
+from `.runs/` into shareable artifacts.
+
+What changed:
+
+- Added final answer JSONL files for Agriculture and Mix.
+- Added retrieval contexts, full retrieval traces, flattened retrieval metrics,
+  and retrieval summaries.
+- Added pairwise judge results and judge summaries.
+- Added consolidated summary CSVs and a Markdown interpretation report.
+- Updated the full OpenAI artifacts README to point collaborators to the
+  analysis entrypoints.
+
+Why this matters:
+
+- Collaborators can now inspect answers, retrieved contexts, graph traversal
+  metrics, pairwise judge outputs, costs, and final win-rate tables without
+  reading gitignored `.runs/`.
+- The artifacts are clearly marked as coming from the new OpenAI-integrated
+  Agriculture + Mix rerun, not legacy answer-eval runs.
+
+Relevant files:
+
+- [artifacts/openai_full_hirag_2026-05/summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md)
+- [artifacts/openai_full_hirag_2026-05/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/README.md)

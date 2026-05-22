@@ -70,7 +70,7 @@ def parse_metadata(items: list[str], description: str | None) -> dict[str, str]:
     return metadata
 
 
-def validate_batch_file(path: Path) -> dict[str, Any]:
+def validate_batch_file(path: Path, endpoint: str | None = None) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(path)
     if path.suffix != ".jsonl":
@@ -103,6 +103,10 @@ def validate_batch_file(path: Path) -> dict[str, Any]:
         raise ValueError(f"{path}: {rows} rows exceeds the 50,000 request per-batch limit")
     if size_bytes > 200 * 1024 * 1024:
         raise ValueError(f"{path}: {size_bytes} bytes exceeds the 200 MB Batch file limit")
+    if endpoint is not None and urls != {endpoint}:
+        raise ValueError(
+            f"{path}: request urls {sorted(urls)} do not match selected endpoint {endpoint!r}"
+        )
     return {
         "rows": rows,
         "size_bytes": size_bytes,
@@ -152,7 +156,7 @@ def main() -> None:
         raise FileExistsError(f"{output_dir} exists; pass --overwrite to reuse it")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    file_stats = validate_batch_file(batch_file)
+    file_stats = validate_batch_file(batch_file, endpoint=args.endpoint)
     if args.validate_only:
         print(json.dumps(file_stats, indent=2))
         return

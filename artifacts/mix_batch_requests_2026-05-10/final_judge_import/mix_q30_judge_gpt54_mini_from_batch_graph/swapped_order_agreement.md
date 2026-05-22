@@ -1,4 +1,4 @@
-# Mix Judge Swapped-Order Agreement
+# Swapped-Order Agreement
 
 ## hi_minmax_budgeted
 - query pairs: 30

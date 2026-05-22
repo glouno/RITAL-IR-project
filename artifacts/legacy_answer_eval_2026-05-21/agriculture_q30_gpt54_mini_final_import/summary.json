@@ -1,0 +1,19 @@
+{
+  "rows": 90,
+  "ok": 90,
+  "errors": 0,
+  "by_variant": {
+    "hi": {
+      "rows": 30,
+      "ok": 30
+    },
+    "hi_minmax_budgeted": {
+      "rows": 30,
+      "ok": 30
+    },
+    "hi_rerank_weighted": {
+      "rows": 30,
+      "ok": 30
+    }
+  }
+}

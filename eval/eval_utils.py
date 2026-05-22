@@ -12,6 +12,7 @@ import tiktoken
 
 from hirag import QueryParam
 from hirag import HiRAG
+from hirag._llm import openai_embedding
 from hirag._storage import NetworkXStorage
 
 
@@ -63,15 +64,18 @@ def build_fastembed_hirag(args: Any, *, llm_func: Any, enable_llm_cache: bool) -
         Path(args.fastembed_cache_path).mkdir(parents=True, exist_ok=True)
     if args.reranker_cache_path:
         Path(args.reranker_cache_path).mkdir(parents=True, exist_ok=True)
-    runtime = {
-        "embed_model": args.embed_model,
-        "embed_dim": args.embed_dim,
-        "max_token_size": args.max_token_size,
-        "fastembed_threads": args.fastembed_threads,
-        "fastembed_parallel": args.fastembed_parallel,
-        "fastembed_cache_path": args.fastembed_cache_path,
-    }
-    embedding_func = REPO_MAIN.create_fastembed_embedding(runtime)
+    if args.embedding_provider == "openai":
+        embedding_func = openai_embedding
+    else:
+        runtime = {
+            "embed_model": args.embed_model,
+            "embed_dim": args.embed_dim,
+            "max_token_size": args.max_token_size,
+            "fastembed_threads": args.fastembed_threads,
+            "fastembed_parallel": args.fastembed_parallel,
+            "fastembed_cache_path": args.fastembed_cache_path,
+        }
+        embedding_func = REPO_MAIN.create_fastembed_embedding(runtime)
     stage_max_tokens = {}
     if hasattr(args, "answer_max_tokens") and args.answer_max_tokens:
         stage_max_tokens["query_answer"] = args.answer_max_tokens
@@ -96,6 +100,7 @@ def build_fastembed_hirag(args: Any, *, llm_func: Any, enable_llm_cache: bool) -
 
 def add_runtime_args(parser: Any) -> None:
     parser.add_argument("--working-dir", default=DEFAULT_WORKING_DIR)
+    parser.add_argument("--embedding-provider", choices=["fastembed", "openai"], default="fastembed")
     parser.add_argument("--embed-model", default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
     parser.add_argument("--embed-dim", type=int, default=384)
     parser.add_argument("--max-token-size", type=int, default=8192)

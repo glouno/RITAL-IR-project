@@ -1,0 +1,22 @@
+{
+  "batch_file": ".runs/openai_batch/agriculture_q30_gpt54_fixed/answer_requests.jsonl",
+  "contexts_file": ".runs/openai_batch/agriculture_q30_gpt54_fixed/contexts.jsonl",
+  "model": "gpt-5.4",
+  "request_count": 90,
+  "skipped_existing": 0,
+  "query_count": 30,
+  "variants": [
+    "hi",
+    "hi_minmax_budgeted",
+    "hi_rerank_weighted"
+  ],
+  "total_input_tokens_estimate": 459037,
+  "mean_input_tokens_estimate": 5100.4111111111115,
+  "total_context_tokens_estimate": 432250,
+  "max_output_tokens_per_request": 512,
+  "completion_token_param": "max_completion_tokens",
+  "expected_output_tokens_upper_bound": 46080,
+  "estimated_batch_cost_usd": 0.459698125,
+  "errors": [],
+  "upload_hint": "Upload with purpose='batch', then create a batch with endpoint='/v1/chat/completions' and completion_window='24h'."
+}

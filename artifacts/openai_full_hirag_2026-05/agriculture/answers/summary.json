@@ -1,0 +1,27 @@
+{
+  "rows": 150,
+  "ok": 150,
+  "errors": 0,
+  "by_variant": {
+    "hi": {
+      "rows": 30,
+      "ok": 30
+    },
+    "hi_minmax_budgeted": {
+      "rows": 30,
+      "ok": 30
+    },
+    "hi_nobridge": {
+      "rows": 30,
+      "ok": 30
+    },
+    "hi_rerank_weighted": {
+      "rows": 30,
+      "ok": 30
+    },
+    "naive": {
+      "rows": 30,
+      "ok": 30
+    }
+  }
+}

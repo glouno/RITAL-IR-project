@@ -34,6 +34,57 @@ from eval.eval_utils import (
 )
 
 
+def retrieval_trace(
+    row: dict[str, Any],
+    *,
+    context: str,
+    debug: dict[str, Any],
+    budget_debug: dict[str, Any],
+) -> dict[str, Any]:
+    """Return a detailed retrieval trace for later method analysis."""
+    bridge_edges = debug.get("bridge_edges", [])
+    communities = debug.get("communities", [])
+    local_entities = debug.get("local_entities", [])
+    return {
+        "custom_id": row["custom_id"],
+        "query_id": row["query_id"],
+        "query": row["query"],
+        "variant": row["variant"],
+        "model": row["model"],
+        "input_tokens": row["input_tokens"],
+        "context_tokens": row["context_tokens"],
+        "latency_seconds": row["latency_seconds"],
+        "error": row["error"],
+        "retrieval": {
+            "mode": debug.get("mode", row["variant"]),
+            "bridge_strategy": debug.get("bridge_strategy"),
+            "local_rerank_strategy": debug.get("local_rerank_strategy"),
+            "local_entities": local_entities,
+            "local_entity_count": len(local_entities),
+            "communities": communities,
+            "community_count": len(communities),
+            "bridge_edges": bridge_edges,
+            "bridge_edge_count": len(bridge_edges),
+            "bridge_path_nodes": debug.get("bridge_path_nodes"),
+            "bridge_path_edges": debug.get("bridge_path_edges"),
+            "mean_edge_cost": debug.get("mean_edge_cost"),
+            "max_edge_cost": debug.get("max_edge_cost"),
+            "mean_edge_score": debug.get("mean_edge_score"),
+            "bridge_path_decisions": debug.get("bridge_path_decisions", []),
+            "bridge_budget_fallbacks": debug.get("bridge_budget_fallbacks", 0),
+            "bridge_budget_stopped": debug.get("bridge_budget_stopped", False),
+            "bridge_fallback": debug.get("bridge_fallback"),
+        },
+        "budgets": budget_debug,
+        "context_sections": {
+            "local_context_text": debug.get("local_context_text"),
+            "global_context_text": debug.get("global_context_text"),
+            "bridge_context_text": debug.get("bridge_context_text"),
+        },
+        "context": context,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     parser = argparse.ArgumentParser(
@@ -102,6 +153,7 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     batch_path = output_dir / args.batch_file_name
     contexts_path = output_dir / "contexts.jsonl"
+    traces_path = output_dir / "retrieval_traces.jsonl"
     manifest_path = output_dir / "manifest.json"
     if batch_path.exists() and not args.overwrite:
         done = existing_custom_ids(batch_path)
@@ -119,9 +171,10 @@ def main() -> None:
     skipped = 0
 
     context_mode = "a" if mode == "a" and contexts_path.exists() else "w"
+    trace_mode = "a" if mode == "a" and traces_path.exists() else "w"
     with batch_path.open(mode, encoding="utf-8") as batch_handle, contexts_path.open(
         context_mode, encoding="utf-8"
-    ) as context_handle:
+    ) as context_handle, traces_path.open(trace_mode, encoding="utf-8") as trace_handle:
         for query_item in queries:
             for variant in args.variants:
                 custom_id = batch_custom_id(query_item["query_id"], variant)
@@ -177,6 +230,28 @@ def main() -> None:
                     "error": error,
                 }
                 rows.append(row)
+                status = "ok" if error is None else "error"
+                print(
+                    (
+                        f"[answer-export] {custom_id} {status} "
+                        f"latency={row['latency_seconds']:.2f}s "
+                        f"context_tokens={context_tokens} input_tokens={input_tokens}"
+                    ),
+                    flush=True,
+                )
+                if param:
+                    trace_handle.write(
+                        json.dumps(
+                            retrieval_trace(
+                                row,
+                                context=context,
+                                debug=dict(param.debug_info),
+                                budget_debug=budget_debug,
+                            ),
+                            ensure_ascii=False,
+                        )
+                        + "\n"
+                    )
                 if args.include_contexts:
                     context_handle.write(
                         json.dumps(
@@ -190,6 +265,7 @@ def main() -> None:
                     )
                 batch_handle.flush()
                 context_handle.flush()
+                trace_handle.flush()
 
     # Batch API offers a 50% discount relative to synchronous API pricing.
     price_table = {
@@ -207,6 +283,7 @@ def main() -> None:
     manifest = {
         "batch_file": str(batch_path),
         "contexts_file": str(contexts_path) if args.include_contexts else None,
+        "retrieval_traces_file": str(traces_path),
         "model": args.model,
         "request_count": written,
         "skipped_existing": skipped,

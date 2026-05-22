@@ -8,6 +8,7 @@ import numpy as np
 
 from hirag import HiRAG, QueryParam
 from hirag._op import (
+    _edge_embedding_batches,
     _find_path_with_required_nodes,
     _load_edge_embedding_disk_cache,
     _mcts_config_from_query,
@@ -242,6 +243,25 @@ class RetrievalExperimentTests(unittest.TestCase):
             _write_edge_embedding_disk_cache(cache_file.name, data)
             loaded = _load_edge_embedding_disk_cache(cache_file.name)
         self.assertEqual(loaded["edge_embeddings"]["A|B"]["embedding"], [1.0, 0.0])
+
+    def test_edge_embedding_batches_bound_items_and_tokens(self) -> None:
+        batches = _edge_embedding_batches(
+            [("A", "B"), ("B", "C"), ("C", "D")],
+            ["alpha beta", "gamma delta epsilon", "zeta eta theta"],
+            max_item_tokens=2,
+            max_batch_tokens=4,
+            max_batch_items=2,
+        )
+
+        self.assertEqual(len(batches), 2)
+        self.assertEqual([len(texts) for _keys, texts in batches], [2, 1])
+        self.assertTrue(
+            all(
+                len(text.split()) <= 2
+                for _keys, texts in batches
+                for text in texts
+            )
+        )
 
     def test_text_unit_snippet_keeps_context_bounded(self) -> None:
         text = _text_unit_context_content(

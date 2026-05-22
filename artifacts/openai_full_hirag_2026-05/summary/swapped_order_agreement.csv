@@ -1,0 +1,9 @@
+dataset,variant,query_pairs,order_agree,order_disagree,missing,order_agreement_rate
+agriculture,hi_minmax_budgeted,30,18,12,0,0.6
+agriculture,hi_nobridge,30,21,9,0,0.7
+agriculture,hi_rerank_weighted,30,23,7,0,0.7666666666666667
+agriculture,naive,30,25,5,0,0.8333333333333334
+mix,hi_minmax_budgeted,30,16,14,0,0.5333333333333333
+mix,hi_nobridge,30,20,10,0,0.6666666666666666
+mix,hi_rerank_weighted,30,16,14,0,0.5333333333333333
+mix,naive,30,27,3,0,0.9

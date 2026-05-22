@@ -314,6 +314,101 @@ uv run python eval/materialize_openai_index_hirag_workdir.py \
   --overwrite
 ```
 
+## Optional Batch Edge Embeddings For Weighted Bridge Retrieval
+
+HiRAG normally computes embeddings lazily through the vector-store/retrieval
+path: query embeddings are computed at query time, and our weighted bridge
+extension also needs embeddings for graph edge descriptions. That default is
+convenient for interactive use because it only computes the cache when a
+weighted bridge mode is first used.
+
+For full benchmark runs, lazy edge embeddings are not ideal:
+
+- the first `hi_rerank_weighted` or `hi_minmax_budgeted` query can spend a long
+  time building the edge cache before any answer request is exported;
+- direct embeddings calls are not Batch-discounted;
+- a graph-wide edge cache can be large, especially for Agriculture;
+- if all edge descriptions are sent at once, OpenAI rejects the request with
+  `max_tokens_per_request`.
+
+There are now two supported paths:
+
+- **Lazy live cache**: answer export computes missing edge embeddings through
+  direct embeddings calls, in bounded batches, and writes the cache
+  incrementally. This is simple and safe for Phase 1 when already running.
+- **Precompute Batch cache**: export edge embedding requests after final
+  workdir materialization, run them through OpenAI Batch, import them into the
+  exact cache file that HiRAG will read during answer export. Prefer this for
+  future CS/Legal and repeatable final reruns.
+
+Export edge embedding requests:
+
+```bash
+uv run python eval/export_openai_edge_embedding_batch.py \
+  --working-dir "$ROOT/$DATASET/10_hirag_workdir" \
+  --model text-embedding-3-small \
+  --embed-dim 1536 \
+  --cache-root "$ROOT/$DATASET/11_answers/edge_embedding_cache" \
+  --output-dir "$ROOT/$DATASET/10_edge_embeddings/requests" \
+  --overwrite
+```
+
+This may create multiple `edge_embedding_requests_*.jsonl` shards to stay below
+Batch file limits. Validate and launch each shard with the embeddings endpoint:
+
+```bash
+for request_file in "$ROOT/$DATASET"/10_edge_embeddings/requests/edge_embedding_requests_*.jsonl; do
+  uv run python eval/run_openai_batch_file.py \
+    --endpoint /v1/embeddings \
+    --batch-file "$request_file" \
+    --validate-only
+done
+```
+
+```bash
+for request_file in "$ROOT/$DATASET"/10_edge_embeddings/requests/edge_embedding_requests_*.jsonl; do
+  shard_name=$(basename "$request_file" .jsonl)
+  screen -dmS "rital_${DATASET}_edgeemb_${shard_name}_$(date +%Y%m%d_%H%M%S)" bash -lc "
+  cd /home/paulbeglin/projects/RITAL-IR-project &&
+  uv run python eval/run_openai_batch_file.py \
+    --endpoint /v1/embeddings \
+    --batch-file '$request_file' \
+    --output-dir '$ROOT/$DATASET/10_edge_embeddings/raw_batch/$shard_name' \
+    --description '${DATASET}_edge_embeddings_text_embedding_3_small' \
+    --poll-interval-seconds 120
+  "
+done
+```
+
+After all shards complete, import them into the runtime cache:
+
+```bash
+uv run python eval/import_openai_edge_embedding_batch.py \
+  --manifest "$ROOT/$DATASET/10_edge_embeddings/requests/manifest.json" \
+  --metadata "$ROOT/$DATASET"/10_edge_embeddings/requests/edge_embedding_metadata_*.jsonl \
+  --batch-output "$ROOT/$DATASET"/10_edge_embeddings/raw_batch/*/*_output.jsonl \
+  --summary-dir "$ROOT/$DATASET/10_edge_embeddings/imported"
+```
+
+Then run answer export with the same cache root:
+
+```bash
+uv run python eval/export_openai_batch_requests.py \
+  --working-dir "$ROOT/$DATASET/10_hirag_workdir" \
+  --query-file "eval/datasets/$DATASET/${DATASET}_query.jsonl" \
+  --query-limit 30 \
+  --variants hi naive hi_nobridge hi_rerank_weighted hi_minmax_budgeted \
+  --model "$MODEL" \
+  --embedding-provider openai \
+  --embed-model text-embedding-3-small \
+  --embed-dim 1536 \
+  --edge-embedding-cache-path "$ROOT/$DATASET/11_answers/edge_embedding_cache" \
+  --answer-max-tokens 1024 \
+  --output-dir "$ROOT/$DATASET/11_answers/requests" \
+  --include-contexts \
+  --completion-token-param max_completion_tokens
+```
+
 Summarize cost:
 
 ```bash

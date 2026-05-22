@@ -199,3 +199,88 @@ The final HiRAG runtime needs more than a graph:
 6. Summarize retrieval traces:
    entities, communities, bridge edges, path lengths, context token budgets, and selected text units.
 7. Promote final small artifacts to `artifacts/openai_full_hirag_2026-05/`.
+
+## Answer Export Incident And Fix
+
+Status as of 2026-05-22 15:20 Europe/Paris:
+
+- Mix answer export completed: `150/150` requests.
+- Mix answer Batch completed: `150/150` completed, `0` failed.
+- Mix imported answers completed: `150` rows, `0` errors.
+- Mix answer Batch usage: `657761` input tokens, `33723` output tokens.
+- Mix answer Batch estimated cost with the current project estimate:
+  approximately `$0.16`.
+- Agriculture answer export is still running in
+  `screen` session `686116.rital_agriculture_answers_20260522_150837`.
+
+What happened:
+
+- The first answer-export attempt got stuck after `20/150` rows because
+  weighted bridge retrieval tried to embed all graph edge descriptions in one
+  OpenAI embeddings request.
+- OpenAI rejected those requests with `max_tokens_per_request`, for example
+  `12060667` tokens on Mix and `42455992` tokens on Agriculture.
+- The fallback avoided crashing, but the export could stall in a network/async
+  state and did not produce the weighted bridge cache we needed.
+
+Fix implemented:
+
+- Edge descriptions are truncated to bounded per-edge embedding text.
+- Missing edge embeddings are embedded in bounded batches.
+- The batch token cap was reduced to `50000` estimated tokens to stay well
+  below OpenAI's `300000` token request limit.
+- The edge embedding cache is now written after every successful batch.
+- Answer export now logs one progress line per query/variant.
+
+Current Agriculture behavior:
+
+- Agriculture has a much larger edge embedding cache to build.
+- The cache is now progressing incrementally and safely, e.g. batch `220/600`
+  had completed by 15:18.
+- Once the first weighted bridge retrieval finishes, the remaining answer rows
+  should progress much faster because the edge cache will be reused.
+
+## Edge Embedding Batch Avenue
+
+Why the issue exists:
+
+- Paper-style HiRAG computes vector retrieval artifacts through its storage and
+  retrieval layer, not as a separate explicit “edge embedding stage”.
+- In the original implementation, embeddings are naturally computed by
+  `NanoVectorDBStorage.upsert()` for vector stores and by query-time calls for
+  retrieval.
+- Our weighted bridge extension adds a new need: score graph edges
+  semantically against the query, which requires embeddings for edge
+  descriptions.
+- That extension initially computed missing edge embeddings lazily during
+  answer-context export, because it was part of runtime retrieval rather than
+  graph construction.
+
+Why this is acceptable but not ideal:
+
+- Lazy edge embeddings are convenient for interactive/local experiments.
+- They preserve graph information: each edge embedding is independent, so
+  computing it live or by Batch produces the same cache content if the same
+  model and truncated text are used.
+- For full runs, lazy live computation is slower at answer-export time and does
+  not receive Batch pricing.
+- It also hides a large preprocessing step inside the first
+  `hi_rerank_weighted`/`hi_minmax_budgeted` query.
+
+New alternative:
+
+- `eval/export_openai_edge_embedding_batch.py` exports graph edge-description
+  embeddings as OpenAI Batch `/v1/embeddings` requests.
+- `eval/import_openai_edge_embedding_batch.py` imports completed Batch outputs
+  into the exact edge-cache JSON file used by HiRAG retrieval.
+- The export shards request files automatically to respect Batch limits.
+- The imported cache can then be passed to answer export with
+  `--edge-embedding-cache-path`, making answer retrieval start with the weighted
+  bridge cache already warm.
+
+Recommended policy:
+
+- Keep the current Agriculture screen running because it is already near the
+  end of the lazy cache build.
+- For future CS/Legal or clean reruns, prefer the explicit Batch edge-embedding
+  stage before answer export.

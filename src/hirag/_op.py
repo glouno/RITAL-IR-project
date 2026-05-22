@@ -108,6 +108,9 @@ def _late_interaction_score(query_embedding: Any, document_embedding: Any) -> fl
 _RERANKER_CACHE: dict[tuple[str, str | None], Any] = {}
 _RERANKER_FAILURES: set[tuple[str, str | None]] = set()
 _EDGE_EMBEDDING_CACHE: dict[tuple[Any, ...], dict[str, Any]] = {}
+_EDGE_EMBEDDING_MAX_INPUT_TOKENS = 2048
+_EDGE_EMBEDDING_MAX_BATCH_TOKENS = 50_000
+_EDGE_EMBEDDING_MAX_BATCH_ITEMS = 512
 
 
 def _hash_text(value: str) -> str:
@@ -1623,6 +1626,47 @@ def _write_edge_embedding_disk_cache(cache_file: Path | None, data: dict[str, An
         logger.warning("Failed to write edge embedding cache %s: %s", cache_file, exc)
 
 
+def _truncate_edge_embedding_text(text: str, max_tokens: int) -> str:
+    tokens = encode_string_by_tiktoken(text)
+    if len(tokens) <= max_tokens:
+        return text
+    return decode_tokens_by_tiktoken(tokens[:max_tokens])
+
+
+def _edge_embedding_batches(
+    keys: list[tuple[str, str]],
+    texts: list[str],
+    *,
+    max_item_tokens: int = _EDGE_EMBEDDING_MAX_INPUT_TOKENS,
+    max_batch_tokens: int = _EDGE_EMBEDDING_MAX_BATCH_TOKENS,
+    max_batch_items: int = _EDGE_EMBEDDING_MAX_BATCH_ITEMS,
+) -> list[tuple[list[tuple[str, str]], list[str]]]:
+    batches: list[tuple[list[tuple[str, str]], list[str]]] = []
+    current_keys: list[tuple[str, str]] = []
+    current_texts: list[str] = []
+    current_tokens = 0
+    for edge_key, text in zip(keys, texts):
+        bounded_text = _truncate_edge_embedding_text(text, max_item_tokens)
+        token_count = len(encode_string_by_tiktoken(bounded_text))
+        if (
+            current_texts
+            and (
+                current_tokens + token_count > max_batch_tokens
+                or len(current_texts) >= max_batch_items
+            )
+        ):
+            batches.append((current_keys, current_texts))
+            current_keys = []
+            current_texts = []
+            current_tokens = 0
+        current_keys.append(edge_key)
+        current_texts.append(bounded_text)
+        current_tokens += token_count
+    if current_texts:
+        batches.append((current_keys, current_texts))
+    return batches
+
+
 async def _build_query_edge_costs(
     query: str,
     knowledge_graph_inst: BaseGraphStorage,
@@ -1668,10 +1712,14 @@ async def _build_query_edge_costs(
         missing_texts: list[str] = []
         for edge_key, edge_text in edge_texts.items():
             cache_item = cached_embeddings.get("|".join(edge_key))
+            bounded_edge_text = _truncate_edge_embedding_text(
+                edge_text, _EDGE_EMBEDDING_MAX_INPUT_TOKENS
+            )
             text_hash = _hash_text(edge_text)
             if (
                 isinstance(cache_item, dict)
                 and cache_item.get("text_hash") == text_hash
+                and cache_item.get("embedded_text_hash") == _hash_text(bounded_edge_text)
                 and "embedding" in cache_item
             ):
                 edge_embeddings_by_key[edge_key] = cache_item["embedding"]
@@ -1679,22 +1727,47 @@ async def _build_query_edge_costs(
                 missing_keys.append(edge_key)
                 missing_texts.append(edge_text)
         if missing_texts:
+            missing_text_by_key = dict(zip(missing_keys, missing_texts))
             try:
-                missing_embeddings = await embedding_func(missing_texts)
+                batches = _edge_embedding_batches(missing_keys, missing_texts)
+                logger.info(
+                    "Embedding %d graph edges in %d bounded batches",
+                    len(missing_texts),
+                    len(batches),
+                )
+                for batch_index, (batch_keys, batch_texts) in enumerate(batches, start=1):
+                    batch_embeddings = await embedding_func(batch_texts)
+                    for edge_key, bounded_edge_text, embedding in zip(
+                        batch_keys, batch_texts, batch_embeddings
+                    ):
+                        edge_text = missing_text_by_key[edge_key]
+                        embedding_list = (
+                            embedding.tolist()
+                            if hasattr(embedding, "tolist")
+                            else list(embedding)
+                        )
+                        edge_embeddings_by_key[edge_key] = embedding_list
+                        cached_embeddings["|".join(edge_key)] = {
+                            "text_hash": _hash_text(edge_text),
+                            "embedded_text_hash": _hash_text(bounded_edge_text),
+                            "embedding": embedding_list,
+                        }
+                    disk_cache["edge_embeddings"] = cached_embeddings
+                    disk_cache["graph_nodes"] = graph.number_of_nodes()
+                    disk_cache["graph_edges"] = graph.number_of_edges()
+                    disk_cache["max_item_tokens"] = _EDGE_EMBEDDING_MAX_INPUT_TOKENS
+                    disk_cache["max_batch_tokens"] = _EDGE_EMBEDDING_MAX_BATCH_TOKENS
+                    disk_cache["max_batch_items"] = _EDGE_EMBEDDING_MAX_BATCH_ITEMS
+                    _write_edge_embedding_disk_cache(disk_cache_file, disk_cache)
+                    logger.info(
+                        "Embedded edge batch %d/%d (%d cached edges)",
+                        batch_index,
+                        len(batches),
+                        len(cached_embeddings),
+                    )
             except Exception as exc:
                 logger.warning("Query-weighted bridge edge embedding failed: %s", exc)
                 return {}
-            for edge_key, edge_text, embedding in zip(missing_keys, missing_texts, missing_embeddings):
-                embedding_list = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
-                edge_embeddings_by_key[edge_key] = embedding_list
-                cached_embeddings["|".join(edge_key)] = {
-                    "text_hash": _hash_text(edge_text),
-                    "embedding": embedding_list,
-                }
-            disk_cache["edge_embeddings"] = cached_embeddings
-            disk_cache["graph_nodes"] = graph.number_of_nodes()
-            disk_cache["graph_edges"] = graph.number_of_edges()
-            _write_edge_embedding_disk_cache(disk_cache_file, disk_cache)
         edge_embeddings = [
             edge_embeddings_by_key[_edge_key(source, target)]
             for source, target, _data in edges

@@ -910,3 +910,72 @@ Relevant files:
 - [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
 - [tests/test_openai_index_batch.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_openai_index_batch.py)
 - [artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md)
+
+## Answer Retrieval Edge-Embedding Batching
+
+### 2026-05-22
+
+Fixed the answer export path for weighted bridge retrieval on full OpenAI
+graphs.
+
+What changed:
+
+- Edge descriptions used by query-weighted bridge retrieval are now truncated
+  to a bounded per-edge embedding text before embedding.
+- Missing edge embeddings are sent to OpenAI embeddings in bounded batches
+  instead of one graph-wide request.
+- Edge embedding caches are written after every successful batch, so long
+  Agriculture exports can resume without losing all completed edge embeddings.
+- Answer request export now prints one progress line per query/variant.
+
+Why this matters:
+
+- The previous implementation could send tens of millions of edge-description
+  tokens in a single embeddings request and hit OpenAI's
+  `max_tokens_per_request` limit.
+- Mix answers now complete end-to-end with weighted bridge retrieval enabled;
+  Agriculture is progressing through the larger incremental edge cache.
+
+Validation:
+
+- `uv run pytest tests/test_hirag_retrieval_experiments.py tests/test_openai_index_batch.py`
+
+Relevant files:
+
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [eval/export_openai_batch_requests.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_batch_requests.py)
+- [tests/test_hirag_retrieval_experiments.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_hirag_retrieval_experiments.py)
+
+## Batch Edge-Embedding Precompute Path
+
+### 2026-05-22
+
+Added an explicit OpenAI Batch avenue for weighted bridge edge embeddings.
+
+What changed:
+
+- Added `eval/export_openai_edge_embedding_batch.py` to export graph edge
+  descriptions as `/v1/embeddings` Batch requests.
+- Added `eval/import_openai_edge_embedding_batch.py` to import Batch outputs
+  into the same edge-cache JSON that runtime HiRAG retrieval reads.
+- Request export shards large edge embedding jobs to respect Batch file limits.
+- Documented when to choose lazy live edge-cache creation versus precomputed
+  Batch edge-cache creation.
+
+Why this matters:
+
+- The lazy live path is safe and works, but hides a large preprocessing step in
+  the first weighted answer retrieval query.
+- The Batch path is cheaper, more reproducible, and better suited for future
+  CS/Legal full reruns.
+
+Validation:
+
+- `uv run pytest tests/test_openai_index_batch.py tests/test_hirag_retrieval_experiments.py`
+
+Relevant files:
+
+- [eval/export_openai_edge_embedding_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/export_openai_edge_embedding_batch.py)
+- [eval/import_openai_edge_embedding_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_edge_embedding_batch.py)
+- [docs/OPENAI_FULL_HIRAG_RUNBOOK.md](/home/paulbeglin/projects/RITAL-IR-project/docs/OPENAI_FULL_HIRAG_RUNBOOK.md)
+- [artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md)

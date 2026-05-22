@@ -230,6 +230,15 @@ def main() -> None:
                     "error": error,
                 }
                 rows.append(row)
+                status = "ok" if error is None else "error"
+                print(
+                    (
+                        f"[answer-export] {custom_id} {status} "
+                        f"latency={row['latency_seconds']:.2f}s "
+                        f"context_tokens={context_tokens} input_tokens={input_tokens}"
+                    ),
+                    flush=True,
+                )
                 if param:
                     trace_handle.write(
                         json.dumps(

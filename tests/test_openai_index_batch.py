@@ -41,6 +41,12 @@ from eval.import_openai_index_community_report_batch import normalize_report_jso
 from eval.apply_openai_index_cluster_summaries import apply_summaries
 from eval.export_openai_embedding_batch import entity_items, request_body as embedding_request_body
 from eval.import_openai_embedding_batch import convert_rows as convert_embedding_rows
+from eval.export_openai_edge_embedding_batch import (
+    edge_items,
+    request_body as edge_embedding_request_body,
+    write_shards as write_edge_embedding_shards,
+)
+from eval.import_openai_edge_embedding_batch import convert_rows as convert_edge_embedding_rows
 from eval.materialize_openai_index_hirag_workdir import write_precomputed_vector_stores
 from eval.eval_utils import add_runtime_args
 from hirag.regimes import resolve_prompts
@@ -651,6 +657,64 @@ class OpenAIIndexBatchTests(unittest.TestCase):
         self.assertEqual(rows[0]["namespace"], "chunks")
         self.assertEqual(rows[0]["embedding"], [0.1, 0.2, 0.3])
         self.assertIsNone(rows[0]["error"])
+
+    def test_edge_embedding_batch_request_shape(self) -> None:
+        graph = nx.Graph()
+        graph.add_edge('"COMPOST"', '"SOIL"', description="Compost improves soil.")
+        items = edge_items(
+            graph,
+            model="text-embedding-3-small",
+            max_edge_tokens=128,
+        )
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["cache_key"], '"COMPOST"|"SOIL"')
+        body = edge_embedding_request_body("text-embedding-3-small", items[0]["content"])
+        self.assertEqual(body["model"], "text-embedding-3-small")
+        self.assertEqual(body["encoding_format"], "float")
+        self.assertIn("Compost improves soil", body["input"])
+
+    def test_edge_embedding_shards_and_import_cache_rows(self) -> None:
+        graph = nx.Graph()
+        graph.add_edge('"COMPOST"', '"SOIL"', description="Compost improves soil.")
+        items = edge_items(
+            graph,
+            model="text-embedding-3-small",
+            max_edge_tokens=128,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            shards = write_edge_embedding_shards(
+                items,
+                tmp,
+                model="text-embedding-3-small",
+                max_requests_per_file=1,
+                max_file_bytes=10_000,
+            )
+            self.assertEqual(len(shards), 1)
+            metadata = load_metadata(Path(shards[0]["metadata_file"]))
+            output = tmp / "output.jsonl"
+            output.write_text(
+                json.dumps(
+                    {
+                        "custom_id": items[0]["custom_id"],
+                        "response": {
+                            "status_code": 200,
+                            "body": {"data": [{"embedding": [0.1, 0.2]}]},
+                        },
+                        "error": None,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            cache_rows, errors = convert_edge_embedding_rows([output], metadata)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            cache_rows['"COMPOST"|"SOIL"']["embedding"],
+            [0.1, 0.2],
+        )
 
     def test_write_precomputed_vector_stores_outputs_nanovdb_files(self) -> None:
         graph = nx.Graph()

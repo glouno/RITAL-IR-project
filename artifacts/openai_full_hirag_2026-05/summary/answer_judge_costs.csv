@@ -1,0 +1,5 @@
+dataset,stage,requests_completed,requests_failed,input_tokens,output_tokens,total_tokens,estimated_cost_usd
+agriculture,answers,150,0,870417,37807,908224,0.2057360625
+agriculture,judges,240,0,182198,61659,243857,0.1035285
+mix,answers,150,0,657761,33723,691484,0.16126856250000002
+mix,judges,240,0,171308,61654,232962,0.10148099999999999

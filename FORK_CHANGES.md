@@ -979,3 +979,33 @@ Relevant files:
 - [eval/import_openai_edge_embedding_batch.py](/home/paulbeglin/projects/RITAL-IR-project/eval/import_openai_edge_embedding_batch.py)
 - [docs/OPENAI_FULL_HIRAG_RUNBOOK.md](/home/paulbeglin/projects/RITAL-IR-project/docs/OPENAI_FULL_HIRAG_RUNBOOK.md)
 - [artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/OPENAI_FULL_HIRAG_RUN_REPORT_2026-05-22.md)
+
+## Full OpenAI Agriculture/Mix Result Promotion
+
+### 2026-05-22
+
+Promoted the completed Agriculture and Mix OpenAI-only answer/judge outputs
+from `.runs/` into shareable artifacts.
+
+What changed:
+
+- Added final answer JSONL files for Agriculture and Mix.
+- Added retrieval contexts, full retrieval traces, flattened retrieval metrics,
+  and retrieval summaries.
+- Added pairwise judge results and judge summaries.
+- Added consolidated summary CSVs and a Markdown interpretation report.
+- Updated the full OpenAI artifacts README to point collaborators to the
+  analysis entrypoints.
+
+Why this matters:
+
+- Collaborators can now inspect answers, retrieved contexts, graph traversal
+  metrics, pairwise judge outputs, costs, and final win-rate tables without
+  reading gitignored `.runs/`.
+- The artifacts are clearly marked as coming from the new OpenAI-integrated
+  Agriculture + Mix rerun, not legacy answer-eval runs.
+
+Relevant files:
+
+- [artifacts/openai_full_hirag_2026-05/summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md)
+- [artifacts/openai_full_hirag_2026-05/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/README.md)

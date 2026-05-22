@@ -1,0 +1,102 @@
+{
+  "batch_file": ".runs/openai_full_hirag_2026-05/agriculture/12_judges/requests/judge_requests.jsonl",
+  "endpoint": "/v1/chat/completions",
+  "completion_window": "24h",
+  "output_dir": ".runs/openai_full_hirag_2026-05/agriculture/12_judges/raw_batch",
+  "input_file_id": "file-QtYYsrnE4W2bgCyQxjufB4",
+  "batch_id": "batch_6a106d6063c4819087a7172576030d0e",
+  "file_stats": {
+    "rows": 240,
+    "size_bytes": 966700,
+    "models": [
+      "gpt-5.4-mini"
+    ],
+    "urls": [
+      "/v1/chat/completions"
+    ]
+  },
+  "metadata": {
+    "description": "agriculture_judges_q30_gpt54_mini_full_openai"
+  },
+  "created_batch": {
+    "id": "batch_6a106d6063c4819087a7172576030d0e",
+    "completion_window": "24h",
+    "created_at": 1779461472,
+    "endpoint": "/v1/chat/completions",
+    "input_file_id": "file-QtYYsrnE4W2bgCyQxjufB4",
+    "object": "batch",
+    "status": "validating",
+    "cancelled_at": null,
+    "cancelling_at": null,
+    "completed_at": null,
+    "error_file_id": null,
+    "errors": null,
+    "expired_at": null,
+    "expires_at": 1779547872,
+    "failed_at": null,
+    "finalizing_at": null,
+    "in_progress_at": null,
+    "metadata": {
+      "description": "agriculture_judges_q30_gpt54_mini_full_openai"
+    },
+    "model": null,
+    "output_file_id": null,
+    "request_counts": {
+      "completed": 0,
+      "failed": 0,
+      "total": 0
+    },
+    "usage": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "cached_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 0
+    }
+  },
+  "latest_batch": {
+    "id": "batch_6a106d6063c4819087a7172576030d0e",
+    "completion_window": "24h",
+    "created_at": 1779461472,
+    "endpoint": "/v1/chat/completions",
+    "input_file_id": "file-QtYYsrnE4W2bgCyQxjufB4",
+    "object": "batch",
+    "status": "completed",
+    "cancelled_at": null,
+    "cancelling_at": null,
+    "completed_at": 1779461633,
+    "error_file_id": null,
+    "errors": null,
+    "expired_at": null,
+    "expires_at": 1779547872,
+    "failed_at": null,
+    "finalizing_at": 1779461615,
+    "in_progress_at": 1779461533,
+    "metadata": {
+      "description": "agriculture_judges_q30_gpt54_mini_full_openai"
+    },
+    "model": "gpt-5.4-mini-2026-03-17",
+    "output_file_id": "file-BD35WAAiQetjxFiAx6HZLs",
+    "request_counts": {
+      "completed": 240,
+      "failed": 0,
+      "total": 240
+    },
+    "usage": {
+      "input_tokens": 182198,
+      "input_tokens_details": {
+        "cached_tokens": 0
+      },
+      "output_tokens": 61659,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 243857
+    }
+  },
+  "output_path": ".runs/openai_full_hirag_2026-05/agriculture/12_judges/raw_batch/batch_6a106d6063c4819087a7172576030d0e_output.jsonl"
+}

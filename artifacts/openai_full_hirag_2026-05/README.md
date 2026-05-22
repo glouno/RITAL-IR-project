@@ -1,49 +1,67 @@
 # Full OpenAI HiRAG Artifacts
 
-This directory is reserved for cleaned, shareable outputs from the full
-OpenAI-only HiRAG reruns.
+This directory contains cleaned, shareable outputs from the full OpenAI
+Agriculture + Mix rerun.
 
-Active staging runs currently write to:
+This is the new OpenAI-integrated run:
 
-```text
-.runs/openai_full_hirag_2026-05/agriculture/
-.runs/openai_full_hirag_2026-05/mix/
-```
+- `gpt-5.4-mini` for answers and judges;
+- `text-embedding-3-small` for vector stores;
+- OpenAI embeddings for query-time retrieval and weighted bridge edge scoring;
+- 30 questions per dataset;
+- 5 answer variants: `hi`, `naive`, `hi_nobridge`,
+  `hi_rerank_weighted`, `hi_minmax_budgeted`.
 
-Do not move or delete those `.runs/` directories while their `screen` sessions
-are active. Once each dataset is complete and validated, copy only curated
-outputs here.
+Start here:
 
-## Intended Layout
+- `summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md`
+- `summary/judge_win_rates.csv`
+- `summary/retrieval_metrics.csv`
+- `summary/swapped_order_agreement.csv`
+
+## Layout
 
 ```text
 artifacts/openai_full_hirag_2026-05/
+  summary/
+    FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md
+    judge_win_rates.csv
+    retrieval_metrics.csv
+    answer_judge_costs.csv
+    swapped_order_agreement.csv
+
   agriculture/
-    graph_summary.md
-    quality_summary.md
-    cost_summary.json
-    10_hirag_workdir/materialization_summary.md
-    11_answers/imported/answers.jsonl
-    11_answers/requests/retrieval_traces.jsonl
-    11_answers/retrieval_trace_summary/retrieval_trace_metrics.csv
-    11_answers/retrieval_trace_summary/retrieval_trace_summary.md
-    12_judges/imported/judge_results.jsonl
-    12_judges/imported/judge_summary.csv
-    12_judges/imported/swapped_order_agreement.csv
+    answers/
+      answers.jsonl
+      summary.*
+      batch_run_manifest.json
+    retrieval/
+      contexts.jsonl
+      retrieval_traces.jsonl
+      retrieval_trace_metrics.csv
+      retrieval_trace_summary.*
+    judges/
+      judge_results.jsonl
+      judge_summary.*
+      batch_run_manifest.json
 
   mix/
     same structure
 ```
 
-## Promotion Rules
+## What To Use For Analysis
 
-Promote:
+- `answers/answers.jsonl`: generated answers for qualitative inspection.
+- `retrieval/contexts.jsonl`: exact context sent to answer generation.
+- `retrieval/retrieval_traces.jsonl`: rich trace data including selected
+  entities, communities, bridge edges, graph path lengths, budget attempts, and
+  context sections.
+- `retrieval/retrieval_trace_metrics.csv`: flat per-question metrics for
+  plotting and comparisons.
+- `judges/judge_results.jsonl`: pairwise judge outputs with both answer orders.
+- `judges/judge_summary.csv`: per-variant win/loss/tie summary against `hi`.
 
-- final answers, judges, retrieval traces, summaries, and cost files;
-- graph/workdir summaries;
-- GraphML only when size is acceptable and collaborators need graph inspection.
-
-Do not promote by default:
+## Not Included By Default
 
 - embedding caches;
 - full NanoVectorDB workdirs;

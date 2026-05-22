@@ -284,3 +284,68 @@ Recommended policy:
   end of the lazy cache build.
 - For future CS/Legal or clean reruns, prefer the explicit Batch edge-embedding
   stage before answer export.
+
+## Answer And Judge Completion
+
+Status after the final answer and judge Batch screens completed:
+
+Curated shareable artifacts and consolidated tables are in
+`artifacts/openai_full_hirag_2026-05/summary/`, especially
+`FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md`.
+
+| Dataset | Stage | Requests | API failures | Finish reason length | Parse errors |
+|---|---:|---:|---:|---:|---:|
+| Agriculture | Answers | `150` | `0` | `0` | `0` |
+| Mix | Answers | `150` | `0` | `0` | `0` |
+| Agriculture | Judges | `240` | `0` | `0` | `0` |
+| Mix | Judges | `240` | `0` | `0` | `0` |
+
+Answer and judge Batch costs:
+
+| Dataset | Stage | Input Tokens | Output Tokens | Estimated Cost |
+|---|---:|---:|---:|---:|
+| Agriculture | Answers | `870417` | `37807` | `$0.2057` |
+| Mix | Answers | `657761` | `33723` | `$0.1613` |
+| Agriculture | Judges | `182198` | `61659` | `$0.1035` |
+| Mix | Judges | `171308` | `61654` | `$0.1015` |
+
+Pairwise judge win rates against `hi` baseline:
+
+| Dataset | Variant | Wins | Losses | Ties | Win Rate |
+|---|---|---:|---:|---:|---:|
+| Agriculture | `naive` | `52` | `7` | `1` | `0.8667` |
+| Agriculture | `hi_nobridge` | `38` | `20` | `2` | `0.6333` |
+| Agriculture | `hi_rerank_weighted` | `27` | `33` | `0` | `0.4500` |
+| Agriculture | `hi_minmax_budgeted` | `27` | `31` | `2` | `0.4500` |
+| Mix | `naive` | `49` | `11` | `0` | `0.8167` |
+| Mix | `hi_nobridge` | `36` | `24` | `0` | `0.6000` |
+| Mix | `hi_rerank_weighted` | `32` | `28` | `0` | `0.5333` |
+| Mix | `hi_minmax_budgeted` | `28` | `32` | `0` | `0.4667` |
+
+Retrieval trace highlights:
+
+| Dataset | Variant | Mean Context Tokens | Mean Local Entities | Mean Bridge Edges | Mean Bridge Path Edges | Mean Edge Score |
+|---|---|---:|---:|---:|---:|---:|
+| Agriculture | `hi` | `5039.87` | `11.47` | `15.33` | `11.87` | `n/a` |
+| Agriculture | `hi_rerank_weighted` | `5800.83` | `11.00` | `14.80` | `9.87` | `0.5581` |
+| Agriculture | `hi_minmax_budgeted` | `5141.00` | `11.47` | `17.60` | `16.40` | `0.5683` |
+| Agriculture | `naive` | `6016.47` | `0.00` | `0.00` | `n/a` | `n/a` |
+| Mix | `hi` | `3173.83` | `12.00` | `12.60` | `12.43` | `n/a` |
+| Mix | `hi_rerank_weighted` | `3597.03` | `12.00` | `12.63` | `11.47` | `0.5510` |
+| Mix | `hi_minmax_budgeted` | `3205.73` | `12.00` | `12.93` | `13.87` | `0.5515` |
+| Mix | `naive` | `6614.27` | `0.00` | `0.00` | `n/a` | `n/a` |
+
+Initial interpretation:
+
+- The answer and judge pipeline is now technically complete for Agriculture
+  and Mix.
+- `naive` wins strongly under the current LLM-as-judge protocol, likely because
+  it receives substantially more raw text context and produces broad,
+  detailed answers.
+- `hi_nobridge` beats `hi` on both datasets, suggesting our bridge context can
+  add noise under this benchmark/query set.
+- `hi_rerank_weighted` improves over `hi` on Mix but not Agriculture.
+- `hi_minmax_budgeted` does not beat `hi` on either dataset in the current
+  judge setup.
+- None of the retrieval modes exceeded the configured context budget in these
+  answer exports.

@@ -1,0 +1,61 @@
+dataset,query_id,hi_source_docs,naive_source_docs,hi_chunk_ids,naive_chunk_ids,overlap_chunk_ids,hi_only_chunk_ids,naive_only_chunk_ids,jaccard,hi_source_chars,naive_source_chars,hi_context_tokens,naive_context_tokens,hi_snippet_full_chunk_ratio_mean,hi_snippet_full_chunk_ratio_median,naive_snippet_full_chunk_ratio_mean,naive_snippet_full_chunk_ratio_median,hi_mapped_docs,naive_mapped_docs,query
+agriculture,0,4,5,4,5,3,1,2,0.5,4092,28421,4779,6017,0.18169940296714815,0.1915130213485961,1.0,1.0,4,5,"What are the steps involved in extracting and handling honey, and why is it important to strain the honey after extraction?"
+agriculture,1,4,5,4,5,0,4,5,0.0,3780,28697,3177,6016,0.1518273604407033,0.16130989169447213,1.0,1.0,4,5,What is the definition of a small farm according to the author?
+agriculture,2,4,5,4,5,3,1,2,0.5,4359,30220,4115,6017,0.18023470621898952,0.18106087227790194,1.0,1.0,4,5,"How does the Intervale in Burlington, Vermont, support new farmers?"
+agriculture,3,4,5,4,5,0,4,5,0.0,4103,26660,4063,6015,0.19452431312127783,0.19508175175541864,1.0,1.0,4,5,What is the significance of the rest period in grass growth as described in the book?
+agriculture,4,4,5,4,5,2,2,3,0.2857142857142857,3438,30075,4778,6016,0.1418505943455836,0.1416150232867295,1.0,1.0,4,5,What innovative practices does Greensgrow Farm in Philadelphia employ to make urban farming sustainable?
+agriculture,5,5,5,5,5,0,5,5,0.0,5565,32120,3525,6017,0.21031964975637127,0.1823547685616651,1.0,1.0,5,5,What are the two dogmas of environmental philosophy mentioned in the book?
+agriculture,6,5,5,5,5,2,3,3,0.25,5459,29530,7275,6016,0.18858201953278877,0.18663392387300473,1.0,1.0,5,5,"What are the benefits of direct marketing for small farmers, as highlighted in the book?"
+agriculture,7,5,5,5,5,2,3,3,0.25,4755,27609,3560,6016,0.16344027408022097,0.16380149205319494,1.0,1.0,5,5,"Who is the series editor of ""Culture of the Land""?"
+agriculture,8,5,5,5,5,0,5,5,0.0,5386,29158,7246,6017,0.19014874207946317,0.19571230982019364,1.0,1.0,5,5,Describe the role of the varroa mite in the decline of honey bee populations.
+agriculture,9,4,5,3,5,1,2,4,0.14285714285714285,2567,26376,3628,6018,0.13462291522035094,0.14035876006426984,1.0,1.0,4,5,"What is the concept of ""intensity of grazing"" as defined in the book?"
+agriculture,10,3,5,3,5,0,3,5,0.0,2558,31033,8581,6017,0.14661966043375113,0.17876901798063624,1.0,1.0,3,5,"What are the environmental and ethical considerations in beekeeping, particularly regarding the use of pesticides and the welfare of bees?"
+agriculture,11,5,5,5,5,1,4,4,0.1111111111111111,4233,29314,4629,6016,0.14308479785691494,0.14644351464435146,1.0,1.0,5,5,What are the environmental considerations in market farming?
+agriculture,12,4,5,4,5,2,2,3,0.2857142857142857,2658,30716,6107,6019,0.11700262532830599,0.10358156824160906,1.0,1.0,4,5,"What historical agricultural practices does Howard criticize, and why?"
+agriculture,13,5,5,5,5,1,4,4,0.1111111111111111,4840,30267,6905,6018,0.17031475652832398,0.16395203150170037,1.0,1.0,5,5,"What is the primary motivation for writing ""Natural Beekeeping""?"
+agriculture,14,5,5,5,5,3,2,2,0.42857142857142855,5412,31100,4791,6015,0.1958289423740999,0.1782443953268077,1.0,1.0,5,5,"How does Growing Gardens support home gardeners in Portland, Oregon?"
+agriculture,15,5,5,4,5,3,1,2,0.5,3628,29224,3421,6016,0.12494125728871579,0.16299851067350654,1.0,1.0,5,5,How does the author define agripreneurship?
+agriculture,16,5,5,5,5,2,3,3,0.25,5107,28953,5208,6017,0.17607232939845513,0.17256162915326903,1.0,1.0,5,5,"What is the role of cover crops in farming, according to the book?"
+agriculture,17,4,5,4,5,1,3,4,0.125,3826,28499,5262,6018,0.17002092153378523,0.18431431229462703,1.0,1.0,4,5,How does the book describe the influence of fertilizers on grass growth?
+agriculture,18,5,5,5,5,2,3,3,0.25,5700,29384,6455,6016,0.20017621517817827,0.20143271362783557,1.0,1.0,5,5,How does the Stametsian Model for Permaculture integrate mushrooms into sustainable agriculture?
+agriculture,19,5,5,5,5,2,3,3,0.25,5305,28874,3953,6017,0.1836572374133011,0.1949991317937142,1.0,1.0,5,5,How does a beekeeper typically control swarming in a colony?
+agriculture,20,4,5,4,5,0,4,5,0.0,3710,29685,5770,6019,0.15439975910975312,0.15455247770637132,1.0,1.0,4,5,"What is the ""Law of Return"" in agriculture, according to Howard?"
+agriculture,21,4,5,4,5,3,1,2,0.5,4319,28651,3490,6017,0.20942654677273165,0.19350830825918525,1.0,1.0,4,5,How does the book address the issue of grass tetany in livestock?
+agriculture,22,5,5,5,5,1,4,4,0.1111111111111111,4330,29523,3608,6016,0.20713861100670825,0.17606694560669456,1.0,1.0,5,5,What are the financial considerations for starting a market farming business?
+agriculture,23,5,5,5,5,3,2,2,0.42857142857142855,3488,29224,5393,6014,0.16351990002862862,0.16535433070866143,1.0,1.0,5,5,"What is the central theme of ""Growing a Revolution: Bringing Our Soil Back to Life""?"
+agriculture,24,4,5,4,5,0,4,5,0.0,3942,28719,4552,6015,0.1784128595198154,0.18947829036848826,1.0,1.0,4,5,How does the book address the relationship between soil health and climate change?
+agriculture,25,4,5,4,5,1,3,4,0.125,3497,31447,5694,6016,0.14290741307197158,0.16675977303957878,1.0,1.0,4,5,What are the three principles of conservation agriculture as outlined in the book?
+agriculture,26,1,5,1,5,0,1,5,0.0,664,28058,7179,6016,0.11938151743976987,0.11938151743976987,1.0,1.0,1,5,What are the potential downsides of beekeeping as described in the book?
+agriculture,27,4,5,4,5,1,3,4,0.125,4231,28831,4926,6016,0.17765380354586854,0.17824035234313212,1.0,1.0,4,5,What are the common reasons people get into market farming?
+agriculture,28,3,5,2,5,1,1,4,0.16666666666666666,1811,28981,5207,6016,0.10557203833612169,0.11539138082673703,1.0,1.0,3,5,"What is the role of draft animals in sustainable farming, as discussed in the book?"
+agriculture,29,4,5,4,5,2,2,3,0.2857142857142857,3845,30291,3919,6015,0.16983226157827824,0.16670526712046632,1.0,1.0,4,5,What are the primary motivations for people to grow their own vegetables according to the National Gardening Association?
+mix,0,5,8,5,8,5,0,3,0.625,3473,37190,2860,8604,0.30512018501955995,0.22086956521739132,1.0,1.0,5,8,"What is the main objection Mary has to the poem ""The Witch of Atlas""?"
+mix,1,5,8,5,8,5,0,3,0.625,4457,37383,2920,8604,0.3445673160848417,0.22270058708414872,1.0,1.0,5,8,Describe the transformation of the Witch of Atlas' mother.
+mix,2,5,8,5,8,5,0,3,0.625,4259,37036,3157,8605,0.3355819034870176,0.22086956521739132,1.0,1.0,5,8,What is the significance of the Witch's cave and its surroundings?
+mix,3,4,5,3,5,2,1,3,0.3333333333333333,3522,22306,4046,5787,0.20721036665116188,0.22037717518109579,1.0,1.0,4,5,"What significant event involving Abd al-Muttalib and the Kaaba occurred, and how did it impact the religious landscape of the region?"
+mix,4,5,5,5,5,3,2,2,0.42857142857142855,5466,22675,2816,5979,0.27997944720235424,0.29679343773303507,1.0,1.0,5,5,What are the challenges associated with using the standard approach of maximizing the likelihood function in statistical inference?
+mix,5,4,5,4,5,4,0,1,0.8,3039,24803,3149,5889,0.1556655637855103,0.18018585644079932,1.0,1.0,4,5,What is the connection between Ashrita Shetty and the film Udhayam NH4?
+mix,6,3,5,3,5,3,0,2,0.6,2793,27835,2806,6015,0.17302152077064628,0.21862348178137653,1.0,1.0,3,5,How did Hans Zimmer's collaboration with Christopher Nolan on Interstellar influence the film's soundtrack?
+mix,7,4,5,4,5,4,0,1,0.8,4348,29178,3465,5634,0.19083780300999537,0.1936547911516982,1.0,1.0,4,5,How does environmental variability affect the reliance of artificial organisms on plasticity?
+mix,8,4,5,4,5,3,1,2,0.5,3807,28710,3160,5635,0.16726287716662222,0.1742540491260191,1.0,1.0,4,5,What role does coevolution play in the development of plasticity rules in embodied agents?
+mix,9,4,5,4,5,4,0,1,0.8,3458,29178,3733,5634,0.15333194034033648,0.14483848099090363,1.0,1.0,4,5,How do minor variations in the task or network parametrization affect the plasticity rules?
+mix,10,5,5,4,5,4,0,1,0.8,4390,27567,5681,6016,0.15851994471690428,0.1917164044130946,1.0,1.0,5,5,What was the reason behind the change in voice actors for Meg Griffin in Family Guy?
+mix,11,4,5,4,5,3,1,2,0.5,4104,26544,2763,6016,0.18748205172728444,0.19388493459040113,1.0,1.0,4,5,"How did The Cleveland Show come into existence, and what was its premise?"
+mix,12,2,5,2,5,2,0,3,0.4,1907,23645,2201,5462,0.18721952856498142,0.18721952856498142,1.0,1.0,2,5,What were the main reasons behind the controversies surrounding the 2014-15 Oman Professional League?
+mix,13,5,5,5,5,2,3,3,0.25,5065,28310,4202,6016,0.17364179553299042,0.18491570541259983,1.0,1.0,5,5,How did the 1981 Major League Baseball strike impact the season and the structure of the playoffs?
+mix,14,5,5,4,5,0,4,5,0.0,4139,26610,2538,6014,0.15712284235472213,0.18557349549171734,1.0,1.0,5,5,"How does ""No Trees in the Street"" contribute to the genre of British kitchen sink realism?"
+mix,15,5,5,5,5,0,5,5,0.0,5387,25849,2875,6014,0.206075733213653,0.2062278575424203,1.0,1.0,5,5,"How does the critical reception of ""No Trees in the Street"" reflect its strengths and weaknesses?"
+mix,16,5,8,5,8,3,2,5,0.3,4119,36371,3411,8596,0.1662880211068612,0.19298899869476038,1.0,1.0,5,8,"What challenges did J. Lee Thompson face in his career, and how did they affect his body of work?"
+mix,17,5,8,4,8,1,3,7,0.09090909090909091,2371,40391,2960,8075,0.08361004261938036,0.09007053716766142,1.0,1.0,5,8,What is the significance of studying puns in the context of human-computer interaction and machine translation?
+mix,18,5,8,5,8,4,1,4,0.4444444444444444,5007,38988,3389,7974,0.2414846474646954,0.179482846036843,1.0,1.0,5,8,How does the joint learning approach for pun detection and location differ from the traditional pipeline methods?
+mix,19,5,8,5,8,4,1,4,0.4444444444444444,5595,36599,3456,7553,0.2742747832889399,0.20088904086168577,1.0,1.0,5,8,How does the proposed approach for joint pun detection and location compare to previous methods in terms of applicability and performance?
+mix,20,5,5,5,5,5,0,0,1.0,5145,24569,4885,5589,0.21516535285412938,0.1928448440788215,1.0,1.0,5,5,What is the primary challenge in numerically determining the nuclear liquid-gas transition from a gas of hadrons to a nuclear phase using conventional lattice QCD?
+mix,21,5,5,5,5,5,0,0,1.0,4742,24569,4779,5589,0.19144043472602185,0.1830621301775148,1.0,1.0,5,5,How is the sign problem addressed in the strong coupling limit of lattice QCD?
+mix,22,4,5,4,5,3,1,2,0.5,4425,25859,2778,6017,0.22731883998689906,0.21767288548114114,1.0,1.0,4,5,What is the significance of the Spiel des Jahres award mentioned in several passages?
+mix,23,5,8,5,8,5,0,3,0.625,5493,35654,2885,8149,0.2667182845168461,0.20145903479236812,1.0,1.0,5,8,What is the unique feature of the game Clans that distinguishes it from other board games?
+mix,24,4,5,4,5,3,1,2,0.5,3953,23422,1925,5330,0.25988761249507025,0.21522613189279854,1.0,1.0,4,5,How does the pie rule in board games help balance gameplay between two players?
+mix,25,3,8,3,8,1,2,7,0.1,2977,38420,2391,8526,0.18992122810597237,0.18957154405820534,1.0,1.0,3,8,What are some of Dana Blankstein-Cohen's contributions to film and television education in Israel?
+mix,26,2,5,2,5,2,0,3,0.4,1739,27397,1829,6016,0.15918729817007535,0.15918729817007535,1.0,1.0,2,5,What is the origin of the Billiken and how has it been used in modern times?
+mix,27,2,8,2,8,1,1,7,0.1111111111111111,2192,30512,1685,7061,0.229776546298506,0.229776546298506,1.0,1.0,2,8,"Who was Auguste Levêque, and what were his contributions to art?"
+mix,28,5,5,3,5,3,0,2,0.6,4239,26405,3713,6015,0.16568284370553282,0.2036888532477947,1.0,1.0,5,5,"What are the key areas of Wale Adebanwi's research, and how has his career evolved from journalism to academia?"
+mix,29,5,5,5,5,1,4,4,0.1111111111111111,4788,25334,2757,6014,0.18796861360864106,0.2040773871437487,1.0,1.0,5,5,"What was Robert Day's transition like from working in the British film industry to directing in Hollywood, and what notable roles did he take on in his productions?"

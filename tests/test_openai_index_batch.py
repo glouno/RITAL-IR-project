@@ -37,6 +37,7 @@ from eval.run_openai_requests_file_direct import endpoint_for_rows, run_rows
 from eval.export_openai_index_cluster_summary_batch import build_cluster_prompt, graph_clusters
 from eval.import_openai_index_cluster_summary_batch import convert_rows as convert_cluster_rows
 from eval.import_openai_index_community_report_batch import convert_rows as convert_report_rows
+from eval.import_openai_index_community_report_batch import normalize_report_json
 from eval.apply_openai_index_cluster_summaries import apply_summaries
 from eval.export_openai_embedding_batch import entity_items, request_body as embedding_request_body
 from eval.import_openai_embedding_batch import convert_rows as convert_embedding_rows
@@ -455,6 +456,30 @@ class OpenAIIndexBatchTests(unittest.TestCase):
             rows = convert_report_rows(output, load_metadata(metadata))
         self.assertIn("# Compost", rows[0]["report"]["report_string"])
         self.assertIsNone(rows[0]["parse_error"])
+
+    def test_community_report_import_rejects_string_findings(self) -> None:
+        parsed, error = normalize_report_json(
+            {
+                "title": "Compost",
+                "summary": "Compost community.",
+                "rating": 5,
+                "findings": '[{"summary": "Soil", "explanation": "Compost helps."}',
+            }
+        )
+        self.assertEqual(parsed["title"], "Compost")
+        self.assertEqual(error, "community report findings is not a JSON list")
+
+    def test_community_report_import_decodes_json_string_findings(self) -> None:
+        parsed, error = normalize_report_json(
+            {
+                "title": "Compost",
+                "summary": "Compost community.",
+                "rating": 5,
+                "findings": json.dumps([{"summary": "Soil", "explanation": "Compost helps."}]),
+            }
+        )
+        self.assertIsNone(error)
+        self.assertEqual(parsed["findings"][0]["summary"], "Soil")
 
     def test_apply_cluster_summaries_adds_summary_nodes_and_edges(self) -> None:
         graph = nx.Graph()

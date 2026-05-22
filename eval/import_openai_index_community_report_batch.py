@@ -27,6 +27,26 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def normalize_report_json(parsed: Any) -> tuple[dict[str, Any], str | None]:
+    if not isinstance(parsed, dict) or not parsed:
+        return {}, "unable to parse community report JSON"
+    if not parsed.get("title"):
+        return parsed, "community report missing title"
+    if not parsed.get("summary"):
+        return parsed, "community report missing summary"
+    findings = parsed.get("findings")
+    if isinstance(findings, str):
+        try:
+            decoded = json.loads(findings)
+        except json.JSONDecodeError:
+            return parsed, "community report findings is not a JSON list"
+        parsed = {**parsed, "findings": decoded}
+        findings = decoded
+    if not isinstance(findings, list):
+        return parsed, "community report findings is not a list"
+    return parsed, None
+
+
 def convert_rows(batch_output: Path, metadata: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     with batch_output.open("r", encoding="utf-8") as handle:
@@ -37,10 +57,10 @@ def convert_rows(batch_output: Path, metadata: dict[str, dict[str, Any]]) -> lis
             custom_id = str(raw.get("custom_id"))
             meta = metadata.get(custom_id, {})
             response_text, error, body = extract_response_text(raw)
-            parsed = {} if error else convert_response_to_json(response_text)
-            parse_error = None if parsed else "unable to parse community report JSON"
+            parsed_raw = {} if error else convert_response_to_json(response_text)
+            parsed, parse_error = normalize_report_json(parsed_raw)
             community = meta.get("community") or {}
-            report_string = _community_report_json_to_str(parsed) if parsed else ""
+            report_string = _community_report_json_to_str(parsed) if parsed and not parse_error else ""
             rows.append(
                 {
                     "custom_id": custom_id,

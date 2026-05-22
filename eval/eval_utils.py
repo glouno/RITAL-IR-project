@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -198,7 +199,9 @@ def build_context_with_budget(
             only_need_context=True,
             budget_scale=scale,
         )
+        retrieval_start = time.perf_counter()
         context = graph.query(query, param=param)
+        retrieval_seconds = time.perf_counter() - retrieval_start
         messages = build_answer_messages(query, context, args.response_type)
         input_tokens = estimate_chat_tokens(messages)
         attempts.append(
@@ -214,6 +217,7 @@ def build_context_with_budget(
                     "text": param.max_token_for_text_unit,
                 },
                 "input_tokens": input_tokens,
+                "retrieval_seconds": retrieval_seconds,
             }
         )
         last_context = context
@@ -226,6 +230,9 @@ def build_context_with_budget(
         "context_input_tokens": attempts[-1]["input_tokens"],
         "context_budget_attempts": attempts,
         "context_within_budget": attempts[-1]["input_tokens"] <= args.max_input_tokens,
+        "retrieval_time_seconds": sum(
+            float(item.get("retrieval_seconds", 0.0) or 0.0) for item in attempts
+        ),
     }
     return last_context, last_param, budget_debug
 

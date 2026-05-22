@@ -5,6 +5,7 @@ import unittest
 from argparse import Namespace
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from eval.answer_generation_benchmark import compact_debug, existing_keys
 from eval.build_human_annotation_packet import (
@@ -154,9 +155,45 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
             args,
         )
         self.assertLessEqual(budget_debug["context_input_tokens"], args.max_input_tokens)
+        self.assertGreaterEqual(budget_debug["retrieval_time_seconds"], 0.0)
+        self.assertIn("retrieval_seconds", budget_debug["context_budget_attempts"][0])
         self.assertEqual(final_param.mode, "hi_mcts")
         self.assertEqual(final_param.debug_info["bridge_strategy"], "mcts")
         self.assertIn("context", context)
+
+    def test_build_context_with_budget_tracks_retrieval_time(self) -> None:
+        args = SimpleNamespace(
+            top_k=12,
+            top_m=6,
+            response_type="Multiple Paragraphs",
+            min_section_budget=100,
+            max_token_for_local_context=1000,
+            max_token_for_bridge_knowledge=900,
+            max_token_for_community_report=800,
+            max_token_for_text_unit=700,
+            text_unit_snippet_chars=1200,
+            text_unit_snippet_strategy="query_overlap",
+            max_budget_attempts=2,
+            budget_shrink_factor=0.5,
+            max_input_tokens=999999,
+        )
+
+        class _FakeGraph:
+            def query(self, query, param):
+                return "tiny context"
+
+        with patch("eval.eval_utils.time.perf_counter", side_effect=[10.0, 10.4]):
+            _context, _param, budget_debug = build_context_with_budget(
+                _FakeGraph(),
+                "Why bridge?",
+                "hi_mcts",
+                args,
+            )
+
+        self.assertAlmostEqual(budget_debug["retrieval_time_seconds"], 0.4)
+        self.assertAlmostEqual(
+            budget_debug["context_budget_attempts"][0]["retrieval_seconds"], 0.4
+        )
 
     def test_pairwise_prompt_parser_and_summary(self) -> None:
         prompt = build_prompt("What is soil health?", "A", "B")

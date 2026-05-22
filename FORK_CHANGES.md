@@ -876,6 +876,9 @@ What changed:
   - maximum candidate hops used
   - mean candidate hops used
   - count of segments where adaptive radius expansion happened
+- Added retrieval timing to saved context metadata:
+  - total retrieval time across budget attempts
+  - per-attempt retrieval time inside `context_budget_attempts`
 - Extended unit tests to lock in the richer benchmark debug schema
 
 Why this matters:

@@ -1762,6 +1762,7 @@ def _mcts_config_from_query(query_param: QueryParam) -> MCTSBridgeConfig:
         max_iterations=query_param.mcts_max_iterations,
         exploration_constant=query_param.mcts_exploration_constant,
         candidate_hops=query_param.mcts_candidate_hops,
+        candidate_max_hops=query_param.mcts_candidate_max_hops,
         candidate_top_neighbors=query_param.mcts_candidate_top_neighbors,
         progressive_widening_coefficient=query_param.mcts_progressive_widening_coefficient,
         progressive_widening_exponent=query_param.mcts_progressive_widening_exponent,

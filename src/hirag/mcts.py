@@ -31,6 +31,7 @@ class MCTSBridgeConfig:
     max_iterations: int = 96
     exploration_constant: float = 1.2
     candidate_hops: int = 2
+    candidate_max_hops: int = 4
     candidate_top_neighbors: int = 12
     progressive_widening_coefficient: float = 2.0
     progressive_widening_exponent: float = 0.5
@@ -97,16 +98,30 @@ def _build_candidate_subgraph(
     target: str,
     edge_costs: dict[tuple[str, str], dict[str, float]],
     config: MCTSBridgeConfig,
-) -> nx.Graph:
+) -> tuple[nx.Graph, int, bool]:
     seed_nodes = {source, target}
-    candidate_nodes = {source, target}
-    for seed in seed_nodes:
-        if not graph.has_node(seed):
-            continue
-        lengths = nx.single_source_shortest_path_length(graph, seed, cutoff=config.candidate_hops)
-        candidate_nodes.update(lengths.keys())
+    initial_hops = max(0, config.candidate_hops)
+    max_hops = max(initial_hops, config.candidate_max_hops)
+    candidate_graph = nx.Graph()
+    used_hops = initial_hops
+    radius_expanded = False
 
-    candidate_graph = graph.subgraph(candidate_nodes).copy()
+    for hops in range(initial_hops, max_hops + 1):
+        candidate_nodes = {source, target}
+        for seed in seed_nodes:
+            if not graph.has_node(seed):
+                continue
+            lengths = nx.single_source_shortest_path_length(graph, seed, cutoff=hops)
+            candidate_nodes.update(lengths.keys())
+        candidate_graph = graph.subgraph(candidate_nodes).copy()
+        used_hops = hops
+        try:
+            nx.shortest_path(candidate_graph, source=source, target=target)
+            break
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            continue
+    radius_expanded = used_hops > initial_hops
+
     pruned_graph = nx.Graph()
     pruned_graph.add_nodes_from(candidate_graph.nodes(data=True))
 
@@ -130,10 +145,10 @@ def _build_candidate_subgraph(
     if pruned_graph.has_node(source) and pruned_graph.has_node(target):
         try:
             nx.shortest_path(pruned_graph, source=source, target=target)
-            return pruned_graph
+            return pruned_graph, used_hops, radius_expanded
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             pass
-    return candidate_graph
+    return candidate_graph, used_hops, radius_expanded
 
 
 def _neighbor_order(
@@ -308,15 +323,26 @@ def find_mcts_bridge_path(
     if not graph.has_node(source) or not graph.has_node(target):
         return [], {"decision": "mcts_no_path", "reason": "missing_node"}
 
-    candidate_graph = _build_candidate_subgraph(graph, source, target, edge_costs, config)
+    candidate_graph, used_hops, radius_expanded = _build_candidate_subgraph(
+        graph, source, target, edge_costs, config
+    )
     if not candidate_graph.has_node(source) or not candidate_graph.has_node(target):
-        return [], {"decision": "mcts_no_path", "reason": "candidate_subgraph_missing_node"}
+        return [], {
+            "decision": "mcts_no_path",
+            "reason": "candidate_subgraph_missing_node",
+            "candidate_hops": used_hops,
+            "candidate_radius_expanded": radius_expanded,
+            "candidate_max_hops": max(config.candidate_hops, config.candidate_max_hops),
+        }
     try:
         nx.shortest_path(candidate_graph, source=source, target=target)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         return [], {
             "decision": "mcts_no_path",
             "reason": "candidate_subgraph_disconnected",
+            "candidate_hops": used_hops,
+            "candidate_radius_expanded": radius_expanded,
+            "candidate_max_hops": max(config.candidate_hops, config.candidate_max_hops),
             "candidate_nodes": candidate_graph.number_of_nodes(),
             "candidate_edges": candidate_graph.number_of_edges(),
         }
@@ -379,6 +405,9 @@ def find_mcts_bridge_path(
             "successful_rollouts": successful_rollouts,
             "best_reward": best_reward,
             "fallback_reward": fallback_reward,
+            "candidate_hops": used_hops,
+            "candidate_radius_expanded": radius_expanded,
+            "candidate_max_hops": max(config.candidate_hops, config.candidate_max_hops),
             "candidate_nodes": candidate_graph.number_of_nodes(),
             "candidate_edges": candidate_graph.number_of_edges(),
         }
@@ -389,6 +418,9 @@ def find_mcts_bridge_path(
         "successful_rollouts": successful_rollouts,
         "best_reward": best_reward if best_reward != float("-inf") else None,
         "fallback_reward": fallback_reward,
+        "candidate_hops": used_hops,
+        "candidate_radius_expanded": radius_expanded,
+        "candidate_max_hops": max(config.candidate_hops, config.candidate_max_hops),
         "candidate_nodes": candidate_graph.number_of_nodes(),
         "candidate_edges": candidate_graph.number_of_edges(),
     }

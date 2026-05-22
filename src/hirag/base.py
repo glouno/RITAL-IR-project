@@ -39,6 +39,7 @@ class QueryParam:
     mcts_max_iterations: int = 96
     mcts_exploration_constant: float = 1.2
     mcts_candidate_hops: int = 2
+    mcts_candidate_max_hops: int = 4
     mcts_candidate_top_neighbors: int = 12
     mcts_progressive_widening_coefficient: float = 2.0
     mcts_progressive_widening_exponent: float = 0.5

@@ -73,6 +73,10 @@ def compact_debug(debug: dict[str, Any]) -> dict[str, Any]:
     mcts_steps = [
         item for item in decisions if str(item.get("decision", "")).startswith("mcts")
     ]
+    candidate_hops = [int(item.get("candidate_hops", 0) or 0) for item in mcts_steps]
+    radius_expanded_count = sum(
+        1 for item in mcts_steps if bool(item.get("candidate_radius_expanded", False))
+    )
     return {
         "bridge_strategy": debug.get("bridge_strategy"),
         "local_rerank_strategy": debug.get("local_rerank_strategy"),
@@ -80,11 +84,22 @@ def compact_debug(debug: dict[str, Any]) -> dict[str, Any]:
         "community_count": len(debug.get("communities", [])),
         "bridge_edge_count": len(debug.get("bridge_edges", [])),
         "bridge_path_edges": debug.get("bridge_path_edges"),
+        "bridge_path_decisions": decisions,
         "mean_edge_score": debug.get("mean_edge_score"),
         "max_edge_cost": debug.get("max_edge_cost"),
         "bridge_budget_fallbacks": debug.get("bridge_budget_fallbacks", 0),
         "bridge_budget_stopped": debug.get("bridge_budget_stopped", False),
+        "mcts_total_segments": len(mcts_steps),
         "mcts_segments": len(mcts_steps),
+        "mcts_success_count": sum(1 for item in mcts_steps if item.get("decision") == "mcts"),
+        "mcts_weighted_fallback_count": sum(
+            1 for item in mcts_steps if item.get("decision") == "mcts_weighted_fallback"
+        ),
+        "mcts_no_path_count": sum(
+            1 for item in mcts_steps if item.get("decision") == "mcts_no_path"
+        ),
+        "mcts_any_success": any(item.get("decision") == "mcts" for item in mcts_steps),
+        "mcts_any_no_path": any(item.get("decision") == "mcts_no_path" for item in mcts_steps),
         "mcts_used_weighted_fallback": any(
             item.get("decision") == "mcts_weighted_fallback" for item in mcts_steps
         ),
@@ -92,6 +107,11 @@ def compact_debug(debug: dict[str, Any]) -> dict[str, Any]:
         "mcts_successful_rollouts": sum(
             int(item.get("successful_rollouts", 0) or 0) for item in mcts_steps
         ),
+        "mcts_candidate_hops_max": max(candidate_hops, default=0),
+        "mcts_candidate_hops_mean": (
+            sum(candidate_hops) / len(candidate_hops) if candidate_hops else 0.0
+        ),
+        "mcts_radius_expanded_count": radius_expanded_count,
         "mcts_candidate_nodes_max": max(
             [int(item.get("candidate_nodes", 0) or 0) for item in mcts_steps],
             default=0,

@@ -148,13 +148,49 @@ V_{\text{cand}} =
 N_r(s) \cup N_r(t) \cup \{s,t\}
 $$
 
-with current default:
+Initial default:
 
 $$
-r = 2
+r_0 = 2
 $$
 
-Then repo prunes outgoing neighbors per node by keeping top query-weighted neighbors:
+However, the runtime now uses an adaptive radius schedule.
+
+It starts from:
+
+$$
+r = r_0
+$$
+
+and if the source/target candidate graph is still disconnected, it retries with larger radii:
+
+$$
+r \leftarrow r + 1
+$$
+
+until either:
+
+- source and target become connected inside the candidate graph
+- or a configured maximum radius is reached
+
+Current default maximum radius:
+
+$$
+r_{\max} = 4
+$$
+
+So candidate extraction is:
+
+$$
+V_{\text{cand}}(r)=
+N_r(s) \cup N_r(t) \cup \{s,t\},
+\qquad
+r \in \{r_0, r_0+1, \dots, r_{\max}\}
+$$
+
+This keeps the default search local, but allows MCTS to recover when the initial two-hop neighborhoods are too small to contain any bridge.
+
+After repo picks a connected candidate radius if possible, it prunes outgoing neighbors per node by keeping top query-weighted neighbors:
 
 $$
 \mathcal{N}_{\text{keep}}(v)=
@@ -169,6 +205,8 @@ B = 12
 $$
 
 Repo also forcibly preserves source and target neighbors if present. If pruned graph disconnects source/target, code falls back to unpruned candidate graph.
+
+If source and target are still disconnected after trying all radii up to \(r_{\max}\), repo returns `mcts_no_path`.
 
 ### Step 3. Initialize root state
 
@@ -458,6 +496,7 @@ Current MCTS defaults from [src/hirag/base.py](/Users/bsh2022/Study/master_ue/ri
 - `mcts_max_iterations = 96`
 - `mcts_exploration_constant = 1.2`
 - `mcts_candidate_hops = 2`
+- `mcts_candidate_max_hops = 4`
 - `mcts_candidate_top_neighbors = 12`
 - `mcts_progressive_widening_coefficient = 2.0`
 - `mcts_progressive_widening_exponent = 0.5`
@@ -585,6 +624,9 @@ For MCTS segments, each decision may include:
 - `successful_rollouts`
 - `best_reward`
 - `fallback_reward`
+- `candidate_hops`
+- `candidate_radius_expanded`
+- `candidate_max_hops`
 - `candidate_nodes`
 - `candidate_edges`
 

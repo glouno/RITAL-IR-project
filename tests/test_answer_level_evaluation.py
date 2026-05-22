@@ -66,6 +66,8 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
                         "decision": "mcts",
                         "iterations": 32,
                         "successful_rollouts": 6,
+                        "candidate_hops": 2,
+                        "candidate_radius_expanded": False,
                         "candidate_nodes": 41,
                         "candidate_edges": 58,
                     },
@@ -73,15 +75,36 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
                         "decision": "mcts_weighted_fallback",
                         "iterations": 12,
                         "successful_rollouts": 0,
+                        "candidate_hops": 3,
+                        "candidate_radius_expanded": True,
                         "candidate_nodes": 15,
                         "candidate_edges": 16,
+                    },
+                    {
+                        "decision": "mcts_no_path",
+                        "iterations": 4,
+                        "successful_rollouts": 0,
+                        "candidate_hops": 4,
+                        "candidate_radius_expanded": True,
+                        "candidate_nodes": 9,
+                        "candidate_edges": 7,
                     },
                 ],
             }
         )
-        self.assertEqual(mcts_debug["mcts_segments"], 2)
-        self.assertEqual(mcts_debug["mcts_iterations"], 44)
+        self.assertEqual(len(mcts_debug["bridge_path_decisions"]), 3)
+        self.assertEqual(mcts_debug["mcts_total_segments"], 3)
+        self.assertEqual(mcts_debug["mcts_segments"], 3)
+        self.assertEqual(mcts_debug["mcts_success_count"], 1)
+        self.assertEqual(mcts_debug["mcts_weighted_fallback_count"], 1)
+        self.assertEqual(mcts_debug["mcts_no_path_count"], 1)
+        self.assertTrue(mcts_debug["mcts_any_success"])
+        self.assertTrue(mcts_debug["mcts_any_no_path"])
+        self.assertEqual(mcts_debug["mcts_iterations"], 48)
         self.assertEqual(mcts_debug["mcts_successful_rollouts"], 6)
+        self.assertEqual(mcts_debug["mcts_candidate_hops_max"], 4)
+        self.assertAlmostEqual(mcts_debug["mcts_candidate_hops_mean"], 3.0)
+        self.assertEqual(mcts_debug["mcts_radius_expanded_count"], 2)
         self.assertEqual(mcts_debug["mcts_candidate_nodes_max"], 41)
         self.assertTrue(mcts_debug["mcts_used_weighted_fallback"])
 

@@ -151,6 +151,66 @@ class RetrievalExperimentTests(unittest.TestCase):
         self.assertEqual(path, ["A", "C", "E", "D"])
         self.assertIn(decisions[0]["decision"], {"mcts", "mcts_weighted_fallback"})
         self.assertEqual(decisions[0]["candidate_nodes"], 5)
+        self.assertEqual(decisions[0]["candidate_hops"], 2)
+        self.assertFalse(decisions[0]["candidate_radius_expanded"])
+
+    def test_mcts_candidate_radius_expands_when_initial_hops_disconnect(self) -> None:
+        graph = nx.path_graph(["A", "B", "C", "D", "E", "F", "G"])
+        storage = NetworkXStorage(namespace="demo", global_config={"working_dir": tempfile.mkdtemp()})
+        storage._graph = graph
+        costs = {
+            tuple(sorted((left, right))): {"cost": 0.1}
+            for left, right in graph.edges()
+        }
+        param = QueryParam(
+            bridge_strategy="mcts",
+            mcts_candidate_hops=2,
+            mcts_candidate_max_hops=3,
+            bridge_max_path_edges=6,
+            mcts_max_iterations=32,
+        )
+        path, decisions = asyncio.run(
+            _find_path_with_required_nodes(
+                storage,
+                ["A", "G"],
+                param,
+                costs,
+            )
+        )
+        self.assertEqual(path, ["A", "B", "C", "D", "E", "F", "G"])
+        self.assertEqual(decisions[0]["candidate_hops"], 3)
+        self.assertTrue(decisions[0]["candidate_radius_expanded"])
+        self.assertEqual(decisions[0]["candidate_max_hops"], 3)
+
+    def test_mcts_candidate_radius_stops_at_max_hops(self) -> None:
+        graph = nx.path_graph(["A", "B", "C", "D", "E", "F", "G", "H", "I"])
+        storage = NetworkXStorage(namespace="demo", global_config={"working_dir": tempfile.mkdtemp()})
+        storage._graph = graph
+        costs = {
+            tuple(sorted((left, right))): {"cost": 0.1}
+            for left, right in graph.edges()
+        }
+        param = QueryParam(
+            bridge_strategy="mcts",
+            mcts_candidate_hops=2,
+            mcts_candidate_max_hops=3,
+            bridge_max_path_edges=8,
+            mcts_max_iterations=32,
+        )
+        path, decisions = asyncio.run(
+            _find_path_with_required_nodes(
+                storage,
+                ["A", "I"],
+                param,
+                costs,
+            )
+        )
+        self.assertEqual(path, ["I"])
+        self.assertEqual(decisions[0]["decision"], "mcts_no_path")
+        self.assertEqual(decisions[0]["reason"], "candidate_subgraph_disconnected")
+        self.assertEqual(decisions[0]["candidate_hops"], 3)
+        self.assertTrue(decisions[0]["candidate_radius_expanded"])
+        self.assertEqual(decisions[0]["candidate_max_hops"], 3)
 
     def test_mcts_config_uses_bridge_budget_fields(self) -> None:
         config = _mcts_config_from_query(
@@ -160,6 +220,7 @@ class RetrievalExperimentTests(unittest.TestCase):
                 bridge_length_penalty=0.07,
                 mcts_token_penalty=0.2,
                 mcts_target_reward=1.5,
+                mcts_candidate_max_hops=5,
             )
         )
         self.assertEqual(config.max_path_edges, 9)
@@ -167,6 +228,7 @@ class RetrievalExperimentTests(unittest.TestCase):
         self.assertEqual(config.length_penalty, 0.07)
         self.assertEqual(config.token_penalty, 0.2)
         self.assertEqual(config.target_reward, 1.5)
+        self.assertEqual(config.candidate_max_hops, 5)
 
     def test_edge_embedding_cache_roundtrip(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

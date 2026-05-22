@@ -819,3 +819,71 @@ Relevant files:
 
 - [docs/MCTS_BRIDGE_RETRIEVAL_IDEAS.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/docs/MCTS_BRIDGE_RETRIEVAL_IDEAS.md)
 - [FORK_CHANGES.md](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/FORK_CHANGES.md)
+
+## Adaptive MCTS Candidate Radius
+
+### 2026-05-22
+
+Updated MCTS bridge retrieval so candidate-subgraph construction can widen its hop radius when the initial local neighborhood is too small to connect the source and target nodes.
+
+What changed:
+
+- Added `mcts_candidate_max_hops` to cap adaptive radius growth
+- MCTS now starts at `mcts_candidate_hops` and retries with larger radii until:
+  - a connected candidate graph is found, or
+  - `mcts_candidate_max_hops` is reached
+- Neighbor pruning remains query-weighted and still falls back to the unpruned candidate graph if pruning disconnects the segment
+- Added per-segment debug metadata for:
+  - actual candidate radius used
+  - whether radius expansion happened
+  - configured candidate-radius cap
+- Added targeted tests for:
+  - successful adaptive expansion
+  - capped expansion ending in `mcts_no_path`
+- Updated the implementation note so Step 2 now documents the adaptive radius behavior instead of the old fixed-radius description
+
+Why this matters:
+
+- reduces false `mcts_no_path` failures caused by an overly small initial candidate radius
+- keeps candidate growth bounded instead of tying it to graph size or hierarchy depth
+- makes MCTS bridge behavior easier to inspect in debug output and evaluation runs
+
+Relevant files:
+
+- [src/hirag/base.py](/home/bshkatrin/RITAL-IR-project/src/hirag/base.py)
+- [src/hirag/_op.py](/home/bshkatrin/RITAL-IR-project/src/hirag/_op.py)
+- [src/hirag/mcts.py](/home/bshkatrin/RITAL-IR-project/src/hirag/mcts.py)
+- [docs/MCTS_IMPLEMENTATION.md](/home/bshkatrin/RITAL-IR-project/docs/MCTS_IMPLEMENTATION.md)
+- [tests/test_hirag_retrieval_experiments.py](/home/bshkatrin/RITAL-IR-project/tests/test_hirag_retrieval_experiments.py)
+
+## MCTS Benchmark Debug Expansion
+
+### 2026-05-22
+
+Expanded answer-generation benchmark debug output so `hi_mcts` runs preserve both raw bridge decisions and explicit MCTS success/failure counters in `answers.jsonl`.
+
+What changed:
+
+- `context_debug` now keeps raw `bridge_path_decisions` instead of only aggregate summaries
+- Added explicit compacted MCTS counters for:
+  - successful MCTS segments
+  - weighted-fallback segments
+  - `mcts_no_path` segments
+- Added compacted booleans for:
+  - whether any MCTS segment succeeded
+  - whether any MCTS segment returned `mcts_no_path`
+- Added compacted candidate-radius statistics for:
+  - maximum candidate hops used
+  - mean candidate hops used
+  - count of segments where adaptive radius expansion happened
+- Extended unit tests to lock in the richer benchmark debug schema
+
+Why this matters:
+
+- makes it easy to tell from `answers.jsonl` whether MCTS actually ran successfully, fell back, or failed to find a path
+- preserves per-segment bridge evidence needed for later analysis without losing the convenience of summary fields
+
+Relevant files:
+
+- [eval/answer_generation_benchmark.py](/home/bshkatrin/RITAL-IR-project/eval/answer_generation_benchmark.py)
+- [tests/test_answer_level_evaluation.py](/home/bshkatrin/RITAL-IR-project/tests/test_answer_level_evaluation.py)

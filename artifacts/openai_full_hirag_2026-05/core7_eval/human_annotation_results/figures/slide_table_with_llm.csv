@@ -1,0 +1,5 @@
+Variante,Win rate,Densite du span utile,Gain moyen,LLM win rate strict
+HiRAG classique,-,28.7%,-,-
+Naive,65.0%,32.0%,+0.30,78.6%
+Minmax budgeted,45.0%,32.1%,-0.10,61.5%
+MCTS,52.5%,30.4%,+0.05,38.5%

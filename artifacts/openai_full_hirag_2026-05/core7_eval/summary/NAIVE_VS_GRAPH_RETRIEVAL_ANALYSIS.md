@@ -17,10 +17,11 @@ In short:
 
 - `naive` gives the answer model more direct source text.
 - `hi` gives the answer model a structured graph view, but less textual proof.
-- community reports are effectively absent because the per-report token cap is
-  too low for the first selected community report.
-- some graph-selected entities point to missing text chunk ids, reducing the
-  usable source-doc evidence available to graph modes.
+- community reports are effectively absent because our answer-export harness
+  used a low community-context budget, not because OpenAI generation was
+  truncated.
+- graph-selected entities contain `cluster-*` provenance ids from summary
+  layers; those were being mistaken for missing text chunks during lookup.
 
 ## Key Numbers
 
@@ -61,10 +62,17 @@ Mean retrieved communities:
 | Agriculture | 0.0 | ~0.0 |
 | Mix | 0.0 | ~0.0 |
 
-Why: `max_token_for_community_report` in the answer export defaults to `1000`.
-The first selected related community report is usually larger than this. The
-current truncation helper returns `[]` when the first item alone exceeds the
-budget, so no community report is included.
+Why: `max_token_for_community_report` in the answer export defaults to `1000`
+through `eval/eval_utils.py`. This is an evaluation prompt-budget default from
+our compact answer export path, not the upstream HiRAG default and not an
+OpenAI/vLLM output-token cap.
+
+The upstream-style `QueryParam` default in `src/hirag/base.py` is much higher:
+`max_token_for_community_report=12500`. However, the Core 7 answer export
+overrode it to `1000` to keep answer prompts compact and comparable. The first
+selected related community report is usually larger than this. The current
+truncation helper returns `[]` when the first item alone exceeds the budget, so
+no community report is included.
 
 Measured first selected community report length:
 
@@ -73,11 +81,15 @@ Measured first selected community report length:
 | Agriculture | 29/30 | 1320 |
 | Mix | 30/30 | 1337 |
 
-So our “global” graph context is practically disabled in this run.
+So our “global” graph context is practically disabled in this run. This is a
+real evaluation-config issue: even after moving away from local vLLM, we still
+kept retrieval-context budgets to control prompt size and cost. The mistake was
+using the same small `1000` cap for community reports, whose individual reports
+are often ~1300 tokens.
 
-### Missing Text Chunk References
+### Apparent Missing Text Chunk References
 
-For selected entities, some `source_id` chunk references do not exist in
+For selected entities, some `source_id` references do not exist in
 `kv_store_text_chunks.json`, triggering repeated warnings:
 
 ```text
@@ -91,8 +103,24 @@ Measured missing rates among selected entity source ids:
 | Agriculture | 22.5% | 20.9% |
 | Mix | 50.3% | 49.0% |
 
-This does not break retrieval, but it reduces how much original source evidence
-the graph modes can attach to the final prompt.
+Follow-up inspection showed these are not missing original text chunks. They
+are all `cluster-*` provenance ids introduced when applying LLM cluster-summary
+entities/relations to the graph.
+
+| Dataset | Total node source refs | `cluster-*` refs | Non-cluster missing refs |
+|---|---:|---:|---:|
+| Agriculture | 63,229 | 21,423 | 0 |
+| Mix | 35,845 | 14,126 | 0 |
+
+So the warning is misleading: the original chunk store is not damaged. The bug
+is that cluster-summary provenance was stored in the same `source_id` field as
+document chunks. The graph retrieval code then treated every source id as a
+text chunk id.
+
+Runtime fix applied on 2026-05-23: graph text-unit lookup now ignores
+non-textual `source_id`s such as `cluster-*` and only loads ids prefixed with
+`chunk-`. Longer-term, cluster provenance should probably live in a separate
+metadata field rather than being appended to `source_id`.
 
 ## Qualitative Findings
 
@@ -215,14 +243,17 @@ Graph modes should include more original text evidence. Possible changes:
 - include naive top chunks as a fallback/evidence supplement;
 - reduce entity description verbosity when source evidence is scarce.
 
-### 4. Repair Missing Source References
+### 4. Keep Cluster Provenance Separate From Text Chunks
 
-Investigate why selected graph entities reference chunk ids not present in
-`kv_store_text_chunks.json`, especially Mix where about half of selected entity
-source ids are missing.
+The immediate runtime warning is fixed by ignoring `cluster-*` ids during
+text-chunk lookup. A cleaner graph-materialization fix would store summary
+provenance separately, for example:
 
-This may come from graph materialization, entity merging, stale source ids, or
-document/chunk id transformations.
+- `source_id`: only original document chunk ids;
+- `cluster_source_id` or `summary_source_id`: generated cluster-summary ids;
+- `source_kind`: `chunk`, `cluster_summary`, or mixed metadata.
+
+This would make future trace metrics easier to interpret.
 
 ### 5. Add A Hybrid Variant
 
@@ -256,3 +287,13 @@ After implementing the above, rerun only Agriculture + Mix first:
 - new hybrid graph+source variant.
 
 Then judge + human spot-check.
+
+Recommended immediate rerun sanity check before a full Core 7 rerun:
+
+- export one query per dataset with `--max-token-for-community-report 2200`;
+- confirm `retrieved_communities > 0` for graph modes;
+- confirm no `Text chunks are missing` warnings from `cluster-*` ids;
+- inspect whether graph answers now cite community/global context more often;
+- if reports still drop because some first reports exceed 2200 tokens, either
+  raise the cap to 3000 or implement per-report truncation instead of list-drop
+  truncation.

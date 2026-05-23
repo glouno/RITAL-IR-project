@@ -1246,3 +1246,38 @@ Relevant files:
 
 - [artifacts/openai_full_hirag_2026-05/summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md)
 - [artifacts/openai_full_hirag_2026-05/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/README.md)
+
+## Core 7 Retrieval Evidence Diagnostics
+
+### 2026-05-23
+
+Investigated why `naive` strongly beats graph modes in the Core 7
+Agriculture/Mix evaluation.
+
+What changed:
+
+- Added a shareable analysis note explaining that graph prompts spend much less
+  budget on raw source text than `naive`.
+- Clarified that the `1000` community-report cap comes from the answer-export
+  evaluation harness, not from upstream HiRAG defaults or OpenAI generation
+  caps.
+- Filtered `cluster-*` provenance ids out of text-chunk lookup during graph
+  retrieval so cluster-summary provenance is not mistaken for missing text
+  chunks.
+
+Why this matters:
+
+- The Core 7 graph modes effectively ran with global/community context disabled
+  because selected reports were usually larger than the evaluation cap.
+- The repeated missing-text warning was caused by cluster summary provenance
+  ids, not by lost original document chunks.
+
+Validation:
+
+- `uv run pytest tests/test_hirag_retrieval_experiments.py`
+
+Relevant files:
+
+- [src/hirag/_op.py](/home/paulbeglin/projects/RITAL-IR-project/src/hirag/_op.py)
+- [tests/test_hirag_retrieval_experiments.py](/home/paulbeglin/projects/RITAL-IR-project/tests/test_hirag_retrieval_experiments.py)
+- [artifacts/openai_full_hirag_2026-05/core7_eval/summary/NAIVE_VS_GRAPH_RETRIEVAL_ANALYSIS.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/core7_eval/summary/NAIVE_VS_GRAPH_RETRIEVAL_ANALYSIS.md)

@@ -1295,6 +1295,16 @@ async def _find_most_related_community_from_entities(
     return use_community_reports
 
 
+def _text_chunk_source_ids(source_id: str) -> list[str]:
+    # Cluster-summary provenance ids are not text chunks and cannot be loaded
+    # from kv_store_text_chunks.
+    return [
+        source
+        for source in split_string_by_multi_markers(source_id, [GRAPH_FIELD_SEP])
+        if source.startswith("chunk-")
+    ]
+
+
 async def _find_most_related_text_unit_from_entities(
     node_datas: list[dict],
     query_param: QueryParam,
@@ -1302,7 +1312,7 @@ async def _find_most_related_text_unit_from_entities(
     knowledge_graph_inst: BaseGraphStorage,
 ):
     text_units = [      # the entities related to the retrieved entities
-        split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
+        _text_chunk_source_ids(dp["source_id"])
         for dp in node_datas
     ]
     edges = await asyncio.gather(   # get relations related to the retrieved entities
@@ -1318,7 +1328,7 @@ async def _find_most_related_text_unit_from_entities(
         *[knowledge_graph_inst.get_node(e) for e in all_one_hop_nodes]
     )
     all_one_hop_text_units_lookup = {               # find the text chunks of the 1-hop neighbors entities
-        k: set(split_string_by_multi_markers(v["source_id"], [GRAPH_FIELD_SEP]))
+        k: set(_text_chunk_source_ids(v["source_id"]))
         for k, v in zip(all_one_hop_nodes, all_one_hop_nodes_data)
         if v is not None
     }

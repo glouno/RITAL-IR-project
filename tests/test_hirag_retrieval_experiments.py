@@ -16,6 +16,7 @@ from hirag._op import (
     _minmax_budgeted_path,
     _ordered_unique,
     _rerank_entity_node_datas,
+    _text_chunk_source_ids,
     _text_unit_context_content,
     _write_edge_embedding_disk_cache,
     _weighted_dijkstra_path,
@@ -60,6 +61,12 @@ class RetrievalExperimentTests(unittest.TestCase):
 
     def test_ordered_unique_preserves_retrieval_order(self) -> None:
         self.assertEqual(_ordered_unique(["B", "A", "B", "C", "A"]), ["B", "A", "C"])
+
+    def test_text_chunk_source_ids_ignore_cluster_provenance(self) -> None:
+        self.assertEqual(
+            _text_chunk_source_ids("chunk-a<SEP>cluster-0-12<SEP>chunk-b"),
+            ["chunk-a", "chunk-b"],
+        )
 
     def test_unweighted_bridge_follows_shortest_path(self) -> None:
         graph = nx.Graph()

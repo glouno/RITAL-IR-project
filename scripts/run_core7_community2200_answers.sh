@@ -23,6 +23,20 @@ export_answers() {
   local query_limit="$4"
   local output_dir="$5"
   local answer_max_tokens="$6"
+  local expected_requests=$((query_limit * ${#VARIANTS[@]}))
+
+  if [[ -f "$output_dir/answer_requests.jsonl" ]]; then
+    local existing_requests
+    existing_requests="$(wc -l < "$output_dir/answer_requests.jsonl")"
+    if [[ "$existing_requests" == "$expected_requests" ]]; then
+      echo "Skipping $dataset answer export: found $existing_requests/$expected_requests requests"
+      summarize_trace "$output_dir/retrieval_traces.jsonl" "$output_dir/trace_summary"
+      uv run python eval/run_openai_batch_file.py \
+        --batch-file "$output_dir/answer_requests.jsonl" \
+        --validate-only
+      return 0
+    fi
+  fi
 
   uv run python eval/export_openai_batch_requests.py \
     --working-dir "$workdir" \
@@ -79,6 +93,7 @@ export_answers \
 export_answers \
   mix \
   ".runs/openai_full_hirag_2026-05/mix/10_hirag_workdir_final" \
+  "eval/datasets/mix/mix.jsonl" \
   30 \
   "$MIX_DIR/02_answer_requests" \
   1024

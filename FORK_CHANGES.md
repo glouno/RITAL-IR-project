@@ -8,6 +8,30 @@ Rule for future changes:
 - Keep entries short and grouped by change set, not by every tiny edit.
 - Prefer linking to the main touched files and describing the user-visible or experiment-visible effect.
 
+## Retrieval Documentation For Reporting
+
+### 2026-05-23
+
+Added a report/presentation-ready retrieval note that explains the implemented bounded source snippets and the deterministic bridge-search variants with formulas and algorithm steps.
+
+What changed:
+
+- Added a focused markdown on:
+  - bounded source-document snippets
+  - query-conditioned edge costs and their intuition
+  - `hi_weighted` as query-weighted Dijkstra
+  - `hi_minmax` as non-budgeted minimax bridge search
+  - `hi_minmax_budgeted` as budgeted minimax bridge search with fallbacks
+- Kept the scope intentionally separate from MCTS so it can be reused directly alongside the existing MCTS note
+- Clarified the implementation detail that snippet bounding is optional in core `QueryParam` but enabled by the compact answer/eval helpers
+
+Relevant files:
+
+- [docs/BRIDGE_RETRIEVAL_AND_SNIPPETS_REPORT_READY.md](/home/bshkatrin/RITAL-IR-project/docs/BRIDGE_RETRIEVAL_AND_SNIPPETS_REPORT_READY.md)
+- [src/hirag/_op.py](/home/bshkatrin/RITAL-IR-project/src/hirag/_op.py)
+- [src/hirag/base.py](/home/bshkatrin/RITAL-IR-project/src/hirag/base.py)
+- [eval/eval_utils.py](/home/bshkatrin/RITAL-IR-project/eval/eval_utils.py)
+
 ## Base Fork Point
 
 ### 2026-04-20

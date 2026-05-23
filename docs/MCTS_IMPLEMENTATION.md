@@ -168,6 +168,7 @@ $$
 r \leftarrow r + 1
 $$
 
+
 until either:
 
 - source and target become connected inside the candidate graph

@@ -1,0 +1,7 @@
+variant,valid_comparisons,wins,losses,ties,win_rate,loss_rate,tie_rate,mean_latency_seconds
+hi_mcts,60,27,31,2,0.45,0.5166666666666667,0.03333333333333333,0.0
+hi_minmax,60,31,28,1,0.5166666666666667,0.4666666666666667,0.016666666666666666,0.0
+hi_minmax_budgeted,60,34,26,0,0.5666666666666667,0.43333333333333335,0.0,0.0
+hi_rerank_weighted,60,30,30,0,0.5,0.5,0.0,0.0
+hi_weighted,60,33,27,0,0.55,0.45,0.0,0.0
+naive,60,45,15,0,0.75,0.25,0.0,0.0

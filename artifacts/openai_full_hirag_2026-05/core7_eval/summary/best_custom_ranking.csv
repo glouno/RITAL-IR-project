@@ -1,0 +1,5 @@
+variant,combined_strict_wins_vs_hi,combined_strict_losses_vs_hi,combined_strict_ties,combined_disagree_or_parse,combined_strict_win_rate_all_60,mean_retrieval_time_seconds,mean_context_tokens
+hi_minmax_budgeted,22,18,0,20,0.36666666666666664,3.721756564142803,4173.366666666667
+hi_weighted,20,19,0,21,0.3333333333333333,1.8288451221305877,4064.983333333333
+hi_rerank_weighted,19,25,0,16,0.31666666666666665,6.274041712532441,4698.933333333333
+hi_minmax,15,18,0,27,0.25,3.8106427403787775,4173.366666666667

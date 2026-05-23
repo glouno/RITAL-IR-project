@@ -1,0 +1,45 @@
+{
+  "best_custom": "hi_minmax_budgeted",
+  "ranking": [
+    {
+      "variant": "hi_minmax_budgeted",
+      "combined_strict_wins_vs_hi": 22,
+      "combined_strict_losses_vs_hi": 18,
+      "combined_strict_ties": 0,
+      "combined_disagree_or_parse": 20,
+      "combined_strict_win_rate_all_60": 0.36666666666666664,
+      "mean_retrieval_time_seconds": 3.721756564142803,
+      "mean_context_tokens": 4173.366666666667
+    },
+    {
+      "variant": "hi_weighted",
+      "combined_strict_wins_vs_hi": 20,
+      "combined_strict_losses_vs_hi": 19,
+      "combined_strict_ties": 0,
+      "combined_disagree_or_parse": 21,
+      "combined_strict_win_rate_all_60": 0.3333333333333333,
+      "mean_retrieval_time_seconds": 1.8288451221305877,
+      "mean_context_tokens": 4064.983333333333
+    },
+    {
+      "variant": "hi_rerank_weighted",
+      "combined_strict_wins_vs_hi": 19,
+      "combined_strict_losses_vs_hi": 25,
+      "combined_strict_ties": 0,
+      "combined_disagree_or_parse": 16,
+      "combined_strict_win_rate_all_60": 0.31666666666666665,
+      "mean_retrieval_time_seconds": 6.274041712532441,
+      "mean_context_tokens": 4698.933333333333
+    },
+    {
+      "variant": "hi_minmax",
+      "combined_strict_wins_vs_hi": 15,
+      "combined_strict_losses_vs_hi": 18,
+      "combined_strict_ties": 0,
+      "combined_disagree_or_parse": 27,
+      "combined_strict_win_rate_all_60": 0.25,
+      "mean_retrieval_time_seconds": 3.8106427403787775,
+      "mean_context_tokens": 4173.366666666667
+    }
+  ]
+}

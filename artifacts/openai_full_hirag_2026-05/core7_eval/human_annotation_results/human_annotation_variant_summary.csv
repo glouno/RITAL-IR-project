@@ -1,0 +1,5 @@
+label,variant,n_answers_annotated,n_pairwise_vs_hi,human_win_rate_vs_hi_half_credit,mean_useful_span_density,human_preference_gain_vs_hi,answers_question_gain_vs_hi,mean_answers_question_score,llm_strict_win_rate_vs_hi_on_same_items,human_llm_strict_agreement_rate,n_human_llm_strict_comparable
+HiRAG classique,hi,60,0,,0.28721217123975407,,,0.9833333333333333,,,
+Naive,naive,20,20,0.65,0.3199097795557315,0.3,-0.025,0.925,0.7857142857142857,0.8,10
+Minmax budgeted,hi_minmax_budgeted,20,20,0.45,0.3210644526865255,-0.1,-0.025,0.975,0.6153846153846154,0.625,8
+MCTS,hi_mcts,20,20,0.525,0.303744517641677,0.05,0.0,1.0,0.38461538461538464,0.8571428571428571,7

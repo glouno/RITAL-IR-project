@@ -1,0 +1,4 @@
+variant_vs_hi,n,human_other_wins,human_hi_wins,human_ties,human_win_rate_half_credit,human_preference_gain_vs_hi,llm_strict_other_wins,llm_strict_hi_wins,llm_strict_ties,llm_strict_disagree
+naive,20,10,4,6,0.65,0.3,11,3,0,6
+hi_minmax_budgeted,20,5,7,8,0.45,-0.1,8,5,0,7
+hi_mcts,20,7,6,7,0.525,0.05,5,8,0,7

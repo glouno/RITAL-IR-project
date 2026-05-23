@@ -1,0 +1,121 @@
+packet_id,dataset,query_id,comparison_pair,variant,label,answer_len_chars,answer_len_nonspace,useful_span_len_chars,useful_span_len_nonspace,useful_span_density,answers_question_score,preferred_label,preferred_variant,is_preferred_win,raw_preferred_answer,annotator_id,notes
+1,mix,11,hi vs naive,naive,Answer A,1070,893,304,252,0.2821948488241881,1.0,Answer A,naive,1.0,A,vlad,"two questions in one, hard for text span (written by Paul)"
+1,mix,11,hi vs naive,hi,Answer B,922,769,70,56,0.07282184655396619,1.0,Answer A,naive,0.0,A,vlad,"two questions in one, hard for text span (written by Paul)"
+4,mix,23,hi vs naive,naive,Answer A,801,673,60,54,0.08023774145616643,0.5,Answer A,naive,1.0,A,vlad,Long
+4,mix,23,hi vs naive,hi,Answer B,545,456,68,56,0.12280701754385964,1.0,Answer A,naive,0.0,A,vlad,Long
+3,agriculture,9,hi vs naive,hi,Answer A,775,645,175,149,0.2310077519379845,1.0,tie,tie,0.5,tie,sitara,"I feel like the answer B has too many words (and some of them are not so related), but on the other hand the answer A is too compact? Personally I love the direct highlighting of formula in the answer A and ""why it matters"" part in Answer B"
+3,agriculture,9,hi vs naive,naive,Answer B,1436,1194,257,216,0.18090452261306533,1.0,tie,tie,0.5,tie,sitara,"I feel like the answer B has too many words (and some of them are not so related), but on the other hand the answer A is too compact? Personally I love the direct highlighting of formula in the answer A and ""why it matters"" part in Answer B"
+2,mix,29,hi vs naive,naive,Answer A,916,770,244,206,0.2675324675324675,1.0,tie,tie,0.5,tie,milos,
+2,mix,29,hi vs naive,hi,Answer B,1112,939,387,325,0.34611288604898827,1.0,tie,tie,0.5,tie,milos,
+5,mix,2,hi vs naive,hi,Answer A,1164,978,463,392,0.40081799591002043,1.0,tie,tie,0.5,tie,milos,
+5,mix,2,hi vs naive,naive,Answer B,1204,1010,406,340,0.33663366336633666,1.0,tie,tie,0.5,tie,milos,
+6,mix,0,hi vs naive,hi,Answer A,595,497,222,182,0.36619718309859156,1.0,Answer B,naive,0.0,B,sitara,B is more accurate and no useless words.
+6,mix,0,hi vs naive,naive,Answer B,507,426,495,414,0.971830985915493,1.0,Answer B,naive,1.0,B,sitara,B is more accurate and no useless words.
+8,agriculture,7,hi vs naive,naive,Answer A,406,346,58,48,0.13872832369942195,1.0,tie,tie,0.5,tie,milos,
+8,agriculture,7,hi vs naive,hi,Answer B,358,303,60,50,0.16501650165016502,1.0,tie,tie,0.5,tie,milos,
+11,mix,15,hi vs naive,hi,Answer A,2038,1716,554,470,0.2738927738927739,1.0,Answer A,hi,1.0,A,milos,
+11,mix,15,hi vs naive,naive,Answer B,1871,1573,0,0,0.0,0.5,Answer A,hi,0.0,A,milos,
+9,mix,10,hi vs naive,hi,Answer A,901,745,158,132,0.17718120805369128,0.5,Answer B,naive,0.0,B,sitara,A only answered partially and why hes talking to himself its so weird ugh
+9,mix,10,hi vs naive,naive,Answer B,554,462,552,460,0.9956709956709957,1.0,Answer B,naive,1.0,B,sitara,A only answered partially and why hes talking to himself its so weird ugh
+14,agriculture,3,hi vs naive,naive,Answer A,1833,1537,467,390,0.25374105400130126,1.0,Answer A,naive,1.0,A,milos,
+14,agriculture,3,hi vs naive,hi,Answer B,1003,843,261,221,0.26215895610913403,1.0,Answer A,naive,0.0,A,milos,
+12,agriculture,6,hi vs naive,naive,Answer A,2154,1827,289,245,0.13409961685823754,1.0,tie,tie,0.5,tie,sitara,A has too many words but it gives more examples.
+12,agriculture,6,hi vs naive,hi,Answer B,1053,893,213,181,0.2026875699888018,1.0,tie,tie,0.5,tie,sitara,A has too many words but it gives more examples.
+17,agriculture,27,hi vs naive,naive,Answer A,1927,1618,459,386,0.23856613102595797,1.0,tie,tie,0.5,tie,milos,
+17,agriculture,27,hi vs naive,hi,Answer B,1518,1264,420,348,0.27531645569620256,1.0,tie,tie,0.5,tie,milos,
+20,mix,17,hi vs naive,naive,Answer A,1158,994,343,292,0.2937625754527163,1.0,Answer A,naive,1.0,A,milos,
+20,mix,17,hi vs naive,hi,Answer B,1259,1080,389,336,0.3111111111111111,1.0,Answer A,naive,0.0,A,milos,
+15,agriculture,28,hi vs naive,hi,Answer A,1421,1194,274,230,0.19262981574539365,1.0,Answer A,hi,1.0,A,sitara,First one because it has sections
+15,agriculture,28,hi vs naive,naive,Answer B,1448,1216,370,311,0.2557565789473684,1.0,Answer A,hi,0.0,A,sitara,First one because it has sections
+23,mix,29,hi vs hi_mcts,hi,Answer A,1112,939,387,325,0.34611288604898827,1.0,tie,tie,0.5,tie,milos,
+23,mix,29,hi vs hi_mcts,hi_mcts,Answer B,1141,964,519,438,0.45435684647302904,1.0,tie,tie,0.5,tie,milos,
+18,mix,24,hi vs naive,naive,Answer A,737,611,333,278,0.45499181669394434,1.0,Answer B,hi,0.0,B,sitara,B is more precisely and easy to understand.
+18,mix,24,hi vs naive,hi,Answer B,811,672,380,318,0.4732142857142857,1.0,Answer B,hi,1.0,B,sitara,B is more precisely and easy to understand.
+26,agriculture,7,hi vs hi_mcts,hi,Answer A,358,303,60,50,0.16501650165016502,1.0,tie,tie,0.5,tie,milos,
+26,agriculture,7,hi vs hi_mcts,hi_mcts,Answer B,238,203,60,50,0.24630541871921183,1.0,tie,tie,0.5,tie,milos,
+29,mix,18,hi vs hi_mcts,hi,Answer A,1263,1052,444,370,0.3517110266159696,1.0,Answer B,hi_mcts,0.0,B,milos,
+29,mix,18,hi vs hi_mcts,hi_mcts,Answer B,1507,1268,408,337,0.2657728706624606,1.0,Answer B,hi_mcts,1.0,B,milos,
+32,mix,19,hi vs hi_mcts,hi,Answer A,1392,1190,465,398,0.334453781512605,1.0,Answer B,hi_mcts,0.0,B,milos,
+32,mix,19,hi vs hi_mcts,hi_mcts,Answer B,1657,1401,452,380,0.27123483226266953,1.0,Answer B,hi_mcts,1.0,B,milos,
+21,agriculture,5,hi vs hi_mcts,hi_mcts,Answer A,1030,875,285,243,0.2777142857142857,1.0,Answer A,hi_mcts,1.0,A,sitara,"Personally I like the last sentence of A ""If you want, I can also explain how these ideas relate to environmental ethics, functional integrity, and strong sustainability."""
+21,agriculture,5,hi vs hi_mcts,hi,Answer B,832,708,145,126,0.17796610169491525,1.0,Answer A,hi_mcts,0.0,A,sitara,"Personally I like the last sentence of A ""If you want, I can also explain how these ideas relate to environmental ethics, functional integrity, and strong sustainability."""
+35,mix,8,hi vs hi_mcts,hi,Answer A,1379,1187,533,458,0.38584667228306657,1.0,Answer A,hi,1.0,A,milos,
+35,mix,8,hi vs hi_mcts,hi_mcts,Answer B,1330,1133,431,368,0.324801412180053,1.0,Answer A,hi,0.0,A,milos,
+38,agriculture,28,hi vs hi_mcts,hi_mcts,Answer A,1296,1086,398,336,0.30939226519337015,1.0,Answer B,hi,0.0,B,milos,
+38,agriculture,28,hi vs hi_mcts,hi,Answer B,1421,1194,287,240,0.20100502512562815,1.0,Answer B,hi,1.0,B,milos,
+41,mix,12,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,1508,1287,895,758,0.5889665889665889,1.0,Answer B,hi,0.0,B,milos,I prefer how the answer is more straight to the point.
+41,mix,12,hi vs hi_minmax_budgeted,hi,Answer B,1187,1000,302,257,0.257,1.0,Answer B,hi,1.0,B,milos,I prefer how the answer is more straight to the point.
+24,mix,20,hi vs hi_mcts,hi_mcts,Answer A,515,438,238,201,0.4589041095890411,1.0,tie,tie,0.5,tie,sitara,
+24,mix,20,hi vs hi_mcts,hi,Answer B,648,551,268,226,0.4101633393829401,1.0,tie,tie,0.5,tie,sitara,
+44,mix,21,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,1239,1047,335,278,0.26552053486150906,1.0,tie,tie,0.5,tie,milos,
+44,mix,21,hi vs hi_minmax_budgeted,hi,Answer B,1137,962,334,279,0.29002079002079,1.0,tie,tie,0.5,tie,milos,
+47,mix,25,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,1023,861,407,345,0.40069686411149824,1.0,tie,tie,0.5,tie,milos,
+47,mix,25,hi vs hi_minmax_budgeted,hi,Answer B,904,769,343,291,0.3784135240572172,1.0,tie,tie,0.5,tie,milos,
+27,mix,4,hi vs hi_mcts,hi_mcts,Answer A,1106,944,358,309,0.3273305084745763,1.0,Answer A,hi_mcts,1.0,A,sitara,A has sections division
+27,mix,4,hi vs hi_mcts,hi,Answer B,971,824,284,244,0.2961165048543689,1.0,Answer A,hi_mcts,0.0,A,sitara,A has sections division
+50,mix,20,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,642,551,288,245,0.44464609800362975,1.0,tie,tie,0.5,tie,milos,
+50,mix,20,hi vs hi_minmax_budgeted,hi,Answer B,648,551,313,266,0.4827586206896552,1.0,tie,tie,0.5,tie,milos,
+30,agriculture,25,hi vs hi_mcts,hi,Answer A,632,538,297,252,0.4684014869888476,1.0,tie,tie,0.5,tie,sitara,
+30,agriculture,25,hi vs hi_mcts,hi_mcts,Answer B,573,488,264,227,0.4651639344262295,1.0,tie,tie,0.5,tie,sitara,
+53,agriculture,15,hi vs hi_minmax_budgeted,hi,Answer A,1069,921,325,281,0.30510314875135724,1.0,Answer A,hi,1.0,A,milos,
+53,agriculture,15,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer B,1138,980,262,227,0.2316326530612245,1.0,Answer A,hi,0.0,A,milos,
+33,agriculture,15,hi vs hi_mcts,hi_mcts,Answer A,1256,1078,320,276,0.2560296846011132,1.0,Answer A,hi_mcts,1.0,A,sitara,"I prefer ""Key Elements in the Definition"" than ""What that means in practice"" just personal opinion..."
+33,agriculture,15,hi vs hi_mcts,hi,Answer B,1069,921,325,281,0.30510314875135724,1.0,Answer A,hi_mcts,0.0,A,sitara,"I prefer ""Key Elements in the Definition"" than ""What that means in practice"" just personal opinion..."
+56,mix,29,hi vs hi_minmax_budgeted,hi,Answer A,1112,939,387,325,0.34611288604898827,1.0,Answer A,hi,1.0,A,milos,
+56,mix,29,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer B,1210,1024,451,382,0.373046875,1.0,Answer A,hi,0.0,A,milos,
+59,mix,7,hi vs hi_minmax_budgeted,hi,Answer A,1134,971,0,0,0.0,1.0,Answer A,hi,1.0,A,milos,
+59,mix,7,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer B,1067,899,361,310,0.3448275862068966,1.0,Answer A,hi,0.0,A,milos,
+36,mix,16,hi vs hi_mcts,hi_mcts,Answer A,1678,1418,194,166,0.11706629055007052,1.0,Answer B,hi,0.0,B,sitara,
+36,mix,16,hi vs hi_mcts,hi,Answer B,2017,1695,469,406,0.23952802359882006,1.0,Answer B,hi,1.0,B,sitara,
+39,mix,15,hi vs hi_mcts,hi,Answer A,2038,1716,554,470,0.2738927738927739,1.0,tie,tie,0.5,tie,sitara,
+39,mix,15,hi vs hi_mcts,hi_mcts,Answer B,1818,1527,362,307,0.20104780615586115,1.0,tie,tie,0.5,tie,sitara,
+42,mix,9,hi vs hi_minmax_budgeted,hi,Answer A,842,710,289,244,0.3436619718309859,1.0,tie,tie,0.5,tie,sitara,
+42,mix,9,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer B,989,841,289,246,0.2925089179548157,1.0,tie,tie,0.5,tie,sitara,
+45,agriculture,27,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,1144,958,331,277,0.28914405010438415,1.0,Answer B,hi,0.0,B,sitara,
+45,agriculture,27,hi vs hi_minmax_budgeted,hi,Answer B,1518,1264,420,348,0.27531645569620256,1.0,Answer B,hi,1.0,B,sitara,
+48,mix,18,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,1830,1531,721,593,0.387328543435663,1.0,Answer A,hi_minmax_budgeted,1.0,A,sitara,A has sections
+48,mix,18,hi vs hi_minmax_budgeted,hi,Answer B,1263,1052,444,370,0.3517110266159696,1.0,Answer A,hi_minmax_budgeted,0.0,A,sitara,A has sections
+51,agriculture,21,hi vs hi_minmax_budgeted,hi,Answer A,1920,1634,482,413,0.2527539779681763,1.0,tie,tie,0.5,tie,sitara,
+51,agriculture,21,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer B,1776,1518,468,401,0.264163372859025,1.0,tie,tie,0.5,tie,sitara,
+54,agriculture,3,hi vs hi_minmax_budgeted,hi,Answer A,1003,843,261,221,0.26215895610913403,1.0,Answer B,hi_minmax_budgeted,0.0,B,sitara,B has sections...
+54,agriculture,3,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer B,1223,1020,332,278,0.2725490196078431,1.0,Answer B,hi_minmax_budgeted,1.0,B,sitara,B has sections...
+57,agriculture,14,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,1501,1268,334,285,0.22476340694006308,1.0,Answer B,hi,0.0,B,sitara,"B highlighed ""gardeners in Portland, Oregon"""
+57,agriculture,14,hi vs hi_minmax_budgeted,hi,Answer B,1508,1283,333,287,0.22369446609508964,1.0,Answer B,hi,1.0,B,sitara,"B highlighed ""gardeners in Portland, Oregon"""
+60,agriculture,2,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,1029,874,296,253,0.2894736842105263,1.0,tie,tie,0.5,tie,sitara,
+60,agriculture,2,hi vs hi_minmax_budgeted,hi,Answer B,1177,996,371,315,0.31626506024096385,1.0,tie,tie,0.5,tie,sitara,
+7,agriculture,1,hi vs naive,naive,Answer A,380,313,106,84,0.268370607028754,1.0,Answer A,naive,1.0,A,vlad,
+7,agriculture,1,hi vs naive,hi,Answer B,656,559,57,47,0.08407871198568873,1.0,Answer A,naive,0.0,A,vlad,
+10,mix,16,hi vs naive,hi,Answer A,2017,1695,529,440,0.25958702064896755,1.0,Answer B,naive,0.0,B,vlad,
+10,mix,16,hi vs naive,naive,Answer B,1929,1619,426,358,0.22112415071031502,1.0,Answer B,naive,1.0,B,vlad,
+13,agriculture,10,hi vs naive,hi,Answer A,2080,1773,676,574,0.32374506486181615,1.0,Answer B,naive,0.0,B,vlad,More concise
+13,agriculture,10,hi vs naive,naive,Answer B,2185,1868,491,422,0.2259100642398287,1.0,Answer B,naive,1.0,B,vlad,More concise
+16,agriculture,4,hi vs naive,naive,Answer A,1622,1379,420,357,0.25888324873096447,1.0,Answer A,naive,1.0,A,vlad,
+16,agriculture,4,hi vs naive,hi,Answer B,1614,1391,458,396,0.28468727534148097,0.5,Answer A,naive,0.0,A,vlad,
+19,mix,14,hi vs naive,naive,Answer A,583,484,309,261,0.5392561983471075,0.5,Answer B,hi,0.0,B,vlad,
+19,mix,14,hi vs naive,hi,Answer B,1785,1508,322,269,0.1783819628647215,1.0,Answer B,hi,1.0,B,vlad,
+22,agriculture,14,hi vs hi_mcts,hi_mcts,Answer A,1340,1139,518,439,0.3854258121158911,1.0,Answer A,hi_mcts,1.0,A,vlad,
+22,agriculture,14,hi vs hi_mcts,hi,Answer B,1508,1283,333,287,0.22369446609508964,1.0,Answer A,hi_mcts,0.0,A,vlad,
+25,agriculture,3,hi vs hi_mcts,hi_mcts,Answer A,1183,997,398,333,0.3340020060180542,1.0,Answer A,hi_mcts,1.0,A,vlad,
+25,agriculture,3,hi vs hi_mcts,hi,Answer B,1003,843,551,465,0.5516014234875445,1.0,Answer A,hi_mcts,0.0,A,vlad,
+28,agriculture,27,hi vs hi_mcts,hi,Answer A,1518,1264,420,348,0.27531645569620256,1.0,tie,tie,0.5,tie,vlad,
+28,agriculture,27,hi vs hi_mcts,hi_mcts,Answer B,1022,857,371,309,0.3605600933488915,1.0,tie,tie,0.5,tie,vlad,
+31,agriculture,4,hi vs hi_mcts,hi,Answer A,1614,1391,458,396,0.28468727534148097,1.0,Answer A,hi,1.0,A,vlad,
+31,agriculture,4,hi vs hi_mcts,hi_mcts,Answer B,1152,996,395,342,0.3433734939759036,1.0,Answer A,hi,0.0,A,vlad,
+34,agriculture,8,hi vs hi_mcts,hi_mcts,Answer A,1759,1473,374,311,0.2111337406653089,1.0,tie,tie,0.5,tie,vlad,
+34,agriculture,8,hi vs hi_mcts,hi,Answer B,1352,1141,419,351,0.30762489044697633,1.0,tie,tie,0.5,tie,vlad,
+37,mix,7,hi vs hi_mcts,hi,Answer A,1134,971,374,323,0.33264675592173015,1.0,Answer A,hi,1.0,A,vlad,
+37,mix,7,hi vs hi_mcts,hi_mcts,Answer B,1253,1069,323,279,0.2609915809167446,1.0,Answer A,hi,0.0,A,vlad,
+40,mix,13,hi vs hi_mcts,hi,Answer A,590,493,259,215,0.43610547667342797,1.0,Answer A,hi,1.0,A,vlad,
+40,mix,13,hi vs hi_mcts,hi_mcts,Answer B,724,607,150,124,0.2042833607907743,1.0,Answer A,hi,0.0,A,vlad,
+43,agriculture,10,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,2239,1915,520,451,0.23550913838120105,0.5,Answer B,hi,0.0,B,vlad,
+43,agriculture,10,hi vs hi_minmax_budgeted,hi,Answer B,2080,1773,676,574,0.32374506486181615,1.0,Answer B,hi,1.0,B,vlad,
+46,mix,5,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,456,383,201,170,0.44386422976501305,1.0,tie,tie,0.5,tie,vlad,
+46,mix,5,hi vs hi_minmax_budgeted,hi,Answer B,459,386,183,153,0.3963730569948187,1.0,tie,tie,0.5,tie,vlad,
+49,agriculture,20,hi vs hi_minmax_budgeted,hi,Answer A,1216,1004,283,234,0.23306772908366533,1.0,tie,tie,0.5,tie,vlad,
+49,agriculture,20,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer B,1172,975,332,276,0.28307692307692306,1.0,tie,tie,0.5,tie,vlad,
+52,mix,2,hi vs hi_minmax_budgeted,hi,Answer A,1164,978,463,392,0.40081799591002043,1.0,Answer B,hi_minmax_budgeted,0.0,B,vlad,
+52,mix,2,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer B,1153,972,369,311,0.31995884773662553,1.0,Answer B,hi_minmax_budgeted,1.0,B,vlad,
+55,agriculture,24,hi vs hi_minmax_budgeted,hi,Answer A,1308,1117,338,292,0.26141450313339304,1.0,Answer B,hi_minmax_budgeted,0.0,B,vlad,
+55,agriculture,24,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer B,1606,1363,379,316,0.23184152604548788,1.0,Answer B,hi_minmax_budgeted,1.0,B,vlad,
+58,agriculture,18,hi vs hi_minmax_budgeted,hi_minmax_budgeted,Answer A,2055,1758,486,418,0.23777019340159272,1.0,Answer A,hi_minmax_budgeted,1.0,A,vlad,
+58,agriculture,18,hi vs hi_minmax_budgeted,hi,Answer B,1983,1711,316,277,0.16189362945645822,1.0,Answer A,hi_minmax_budgeted,0.0,A,vlad,

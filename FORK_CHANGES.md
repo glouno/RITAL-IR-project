@@ -8,6 +8,37 @@ Rule for future changes:
 - Keep entries short and grouped by change set, not by every tiny edit.
 - Prefer linking to the main touched files and describing the user-visible or experiment-visible effect.
 
+## Core 7 Evaluation Prep
+
+Prepared the post-merge evaluation path for the combined retrieval + MCTS branch.
+
+- Extended retrieval trace summaries with retrieval wall time, per-segment bridge
+  path edge counts, and MCTS success/fallback/no-path/debug counters.
+- Added pairwise human annotation packet support with yes/partial/no answerability,
+  A/B/tie/neither preference, useful-span fields, and hidden label-to-variant
+  metadata.
+- Loaded `.env` in the shared eval helper so OpenAI embedding calls work
+  consistently in answer/export scripts.
+- Added a Core 7 runbook documenting Agriculture/Mix variant evaluation,
+  Batch edge-embedding cache warmup, answer Batch export, judge Batch export,
+  and pairwise human packet generation.
+- Added a continuation runner that waits for edge-embedding Batch outputs,
+  imports the edge cache, performs one-query smokes, exports/validates the
+  full Core 7 answer request files, and launches answer Batch screens.
+
+Tests:
+
+- `uv run python -m unittest tests.test_hirag_retrieval_experiments tests.test_answer_level_evaluation`
+- `uv run python -m py_compile eval/eval_utils.py eval/summarize_retrieval_traces.py eval/build_human_annotation_packet.py`
+
+Files:
+
+- [eval/summarize_retrieval_traces.py](/home/paulbeglin/projects/RITAL-IR-project/eval/summarize_retrieval_traces.py)
+- [eval/build_human_annotation_packet.py](/home/paulbeglin/projects/RITAL-IR-project/eval/build_human_annotation_packet.py)
+- [eval/eval_utils.py](/home/paulbeglin/projects/RITAL-IR-project/eval/eval_utils.py)
+- [docs/CORE7_EVAL_RUNBOOK_2026-05-23.md](/home/paulbeglin/projects/RITAL-IR-project/docs/CORE7_EVAL_RUNBOOK_2026-05-23.md)
+- [scripts/run_core7_after_edge_embeddings.sh](/home/paulbeglin/projects/RITAL-IR-project/scripts/run_core7_after_edge_embeddings.sh)
+
 ## Base Fork Point
 
 ### 2026-04-20

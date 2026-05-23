@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import tiktoken
+from dotenv import load_dotenv
 
 from hirag import QueryParam
 from hirag import HiRAG
@@ -22,6 +23,7 @@ if MAIN_SPEC is None or MAIN_SPEC.loader is None:
     raise RuntimeError("Unable to load top-level main.py")
 REPO_MAIN = importlib.util.module_from_spec(MAIN_SPEC)
 MAIN_SPEC.loader.exec_module(REPO_MAIN)
+load_dotenv(REPO_ROOT / ".env")
 
 DEFAULT_WORKING_DIR = (
     ".runs/2026-04-22-agri-resume2/graphs/"

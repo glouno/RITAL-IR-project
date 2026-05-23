@@ -39,6 +39,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--model", default="text-embedding-3-small")
     parser.add_argument("--embed-dim", type=int, default=1536)
+    parser.add_argument(
+        "--runtime-cache-model",
+        default=None,
+        help=(
+            "Optional model identity for the HiRAG runtime cache filename. "
+            "Leave unset for OpenAI eval runtime, which keys edge caches by "
+            "the decorated embedding function name."
+        ),
+    )
     parser.add_argument("--cache-root", default=None)
     parser.add_argument("--graphml", default=None)
     parser.add_argument("--max-edge-tokens", type=int, default=_EDGE_EMBEDDING_MAX_INPUT_TOKENS)
@@ -65,17 +74,22 @@ def edge_cache_path(
     cache_root: Path,
     model: str,
     embed_dim: int,
+    runtime_cache_model: str | None = None,
 ) -> Path:
-    embedding_func = SimpleNamespace(__name__="openai_embedding", embedding_dim=embed_dim)
+    # HiRAG wraps embedding_func with limit_async_func_call at runtime, so the
+    # cache key sees the decorated callable name, not the underlying provider.
+    embedding_func = SimpleNamespace(__name__="wait_func", embedding_dim=embed_dim)
     storage = SimpleNamespace(_graphml_xml_file=str(graphml))
+    global_config: dict[str, Any] = {
+        "edge_embedding_cache_path": str(cache_root),
+        "embedding_func": embedding_func,
+    }
+    if runtime_cache_model:
+        global_config["embed_model"] = runtime_cache_model
     return _edge_embedding_cache_file(
         graph,
         storage,
-        {
-            "edge_embedding_cache_path": str(cache_root),
-            "embedding_func": embedding_func,
-            "embed_model": model,
-        },
+        global_config,
     )
 
 
@@ -202,6 +216,7 @@ def main() -> None:
         cache_root=cache_root,
         model=args.model,
         embed_dim=args.embed_dim,
+        runtime_cache_model=args.runtime_cache_model,
     )
     items = edge_items(graph, model=args.model, max_edge_tokens=args.max_edge_tokens)
     shards = write_shards(
@@ -218,6 +233,7 @@ def main() -> None:
         "embed_dim": args.embed_dim,
         "cache_root": str(cache_root),
         "cache_file": str(cache_path),
+        "runtime_cache_model": args.runtime_cache_model,
         "max_edge_tokens": args.max_edge_tokens,
         "runtime_max_batch_tokens": _EDGE_EMBEDDING_MAX_BATCH_TOKENS,
         "edge_count": graph.number_of_edges(),

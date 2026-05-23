@@ -10,8 +10,11 @@ from unittest.mock import patch
 from eval.answer_generation_benchmark import compact_debug, existing_keys
 from eval.build_human_annotation_packet import (
     anonymized_answers,
+    anonymized_pair,
     choose_queries,
+    choose_pairwise_queries,
     load_answers as load_human_answers,
+    parse_pair,
 )
 from eval.eval_utils import (
     batch_custom_id,
@@ -291,20 +294,35 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
                 "bridge_path_edges": 1,
                 "mean_edge_score": 0.8,
                 "bridge_path_decisions": [
-                    {"source": "COMPOST", "target": "SOIL", "decision": "query_weighted"}
+                    {
+                        "source": "COMPOST",
+                        "target": "SOIL",
+                        "decision": "mcts",
+                        "path_edges": 1,
+                        "iterations": 4,
+                    }
                 ],
             },
-            budget_debug={"context_input_tokens": 100, "context_within_budget": True},
+            budget_debug={
+                "context_input_tokens": 100,
+                "context_within_budget": True,
+                "retrieval_time_seconds": 0.25,
+            },
         )
         self.assertEqual(trace["retrieval"]["local_entity_count"], 2)
         self.assertEqual(trace["retrieval"]["community_count"], 1)
         self.assertEqual(trace["retrieval"]["bridge_path_edges"], 1)
-        self.assertEqual(trace["retrieval"]["bridge_path_decisions"][0]["decision"], "query_weighted")
+        self.assertEqual(trace["retrieval"]["bridge_path_decisions"][0]["decision"], "mcts")
 
         flat = flatten_trace(trace)
+        self.assertEqual(flat["bridge_path_decision_edges"], 1)
+        self.assertEqual(flat["mcts_segment_count"], 1)
+        self.assertEqual(flat["mcts_iterations"], 4)
+        self.assertEqual(flat["retrieval_time_seconds"], 0.25)
         summary = summarize([flat])
         self.assertEqual(summary["hi_rerank_weighted"]["rows"], 1)
         self.assertEqual(summary["hi_rerank_weighted"]["mean_bridge_path_edges"], 1)
+        self.assertEqual(summary["hi_rerank_weighted"]["mean_mcts_iterations"], 4)
 
     def test_openai_answer_batch_import(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -471,6 +489,40 @@ class AnswerLevelEvaluationTests(unittest.TestCase):
         self.assertEqual(set(labels.keys()), {"Answer A", "Answer B", "Answer C", "Answer D"})
         self.assertEqual(set(answer_text.keys()), set(labels.keys()))
         self.assertEqual(set(labels.values()), set(variants))
+
+    def test_pairwise_human_packet_helpers(self) -> None:
+        self.assertEqual(parse_pair("hi:naive"), ("hi", "naive"))
+        variants = ["hi", "naive", "hi_mcts"]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            answers_path = Path(tmpdir) / "answers.jsonl"
+            with answers_path.open("w", encoding="utf-8") as handle:
+                for query_id in range(4):
+                    for variant in variants:
+                        handle.write(
+                            json.dumps(
+                                {
+                                    "query_id": str(query_id),
+                                    "query": f"Question {query_id}",
+                                    "variant": variant,
+                                    "answer": f"{variant} answer {query_id}",
+                                    "error": None,
+                                }
+                            )
+                            + "\n"
+                        )
+            answers = load_human_answers(answers_path, variants)
+
+        selected = choose_pairwise_queries(answers, ("hi", "hi_mcts"), 3, seed=11)
+        self.assertEqual(len(selected), 3)
+        labels, answer_text = anonymized_pair(
+            selected[0],
+            answers[selected[0]],
+            ("hi", "hi_mcts"),
+            seed=11,
+        )
+        self.assertEqual(set(labels.keys()), {"Answer A", "Answer B"})
+        self.assertEqual(set(answer_text.keys()), set(labels.keys()))
+        self.assertEqual(set(labels.values()), {"hi", "hi_mcts"})
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ from typing import Any
 
 
 DEFAULT_VARIANTS = ["hi", "hi_weighted", "hi_minmax", "hi_rerank_weighted"]
+DEFAULT_PAIRWISE_PAIRS = ["hi:naive", "hi:hi_mcts"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -24,6 +25,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--proxy-metrics", default=".runs/retrieval_eval/dev_retrieval_q50/metrics.csv")
     parser.add_argument("--query-count", type=int, default=30)
     parser.add_argument("--variants", nargs="*", default=DEFAULT_VARIANTS)
+    parser.add_argument(
+        "--packet-format",
+        choices=["multiway", "pairwise"],
+        default="multiway",
+        help="Write the legacy multi-answer packet or a pairwise human packet.",
+    )
+    parser.add_argument(
+        "--pairs",
+        nargs="*",
+        default=DEFAULT_PAIRWISE_PAIRS,
+        help="Pairwise comparisons as baseline:variant, for example hi:naive.",
+    )
+    parser.add_argument(
+        "--rows-per-pair",
+        type=int,
+        default=20,
+        help="Number of pairwise annotation rows to emit for each pair.",
+    )
     parser.add_argument("--output-dir", default=f".runs/human_eval/{timestamp}")
     parser.add_argument("--seed", type=int, default=13)
     return parser.parse_args()
@@ -124,11 +143,176 @@ def anonymized_answers(query_id: str, by_variant: dict[str, Any], variants: list
     return label_to_variant, label_to_answer
 
 
+def parse_pair(value: str) -> tuple[str, str]:
+    if ":" not in value:
+        raise ValueError(f"Pair must be formatted as baseline:variant, got {value!r}")
+    left, right = [part.strip() for part in value.split(":", 1)]
+    if not left or not right:
+        raise ValueError(f"Pair must contain two non-empty variants, got {value!r}")
+    if left == right:
+        raise ValueError(f"Pair variants must be different, got {value!r}")
+    return left, right
+
+
+def choose_pairwise_queries(
+    answers: dict[str, dict[str, Any]],
+    pair: tuple[str, str],
+    count: int,
+    seed: int,
+) -> list[str]:
+    left, right = pair
+    available = [
+        query_id
+        for query_id, by_variant in answers.items()
+        if left in by_variant and right in by_variant
+    ]
+    rng = random.Random(f"{seed}:{left}:{right}")
+    available = sorted(available, key=lambda value: int(value) if value.isdigit() else value)
+    rng.shuffle(available)
+    return available[:count]
+
+
+def anonymized_pair(
+    query_id: str,
+    by_variant: dict[str, Any],
+    pair: tuple[str, str],
+    seed: int,
+) -> tuple[dict[str, str], dict[str, str]]:
+    rng = random.Random(f"{seed}:{query_id}:{pair[0]}:{pair[1]}")
+    labels = ["Answer A", "Answer B"]
+    variants = list(pair)
+    rng.shuffle(variants)
+    label_to_variant = dict(zip(labels, variants))
+    label_to_answer = {
+        label: by_variant[variant]["answer"]
+        for label, variant in label_to_variant.items()
+    }
+    return label_to_variant, label_to_answer
+
+
+def write_pairwise_packet(args: argparse.Namespace, answers: dict[str, dict[str, Any]]) -> None:
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    pairs = [parse_pair(value) for value in args.pairs]
+    json_path = output_dir / "human_pairwise_annotation_packet.jsonl"
+    csv_path = output_dir / "human_pairwise_annotation_packet.csv"
+    metadata_path = output_dir / "human_pairwise_hidden_metadata.jsonl"
+    csv_rows: list[dict[str, Any]] = []
+    packet_id = 0
+    with json_path.open("w", encoding="utf-8") as json_handle, metadata_path.open(
+        "w", encoding="utf-8"
+    ) as metadata_handle:
+        for pair in pairs:
+            selected = choose_pairwise_queries(
+                answers,
+                pair,
+                args.rows_per_pair,
+                args.seed,
+            )
+            for query_id in selected:
+                packet_id += 1
+                by_variant = answers[query_id]
+                query = next(iter(by_variant.values()))["query"]
+                label_to_variant, label_to_answer = anonymized_pair(
+                    query_id, by_variant, pair, args.seed
+                )
+                record = {
+                    "packet_id": packet_id,
+                    "query_id": query_id,
+                    "pair": {"left": pair[0], "right": pair[1]},
+                    "query": query,
+                    "answer_a": label_to_answer["Answer A"],
+                    "answer_b": label_to_answer["Answer B"],
+                    "annotation_fields": {
+                        "does_answer_a_answer_question": "",
+                        "does_answer_b_answer_question": "",
+                        "preferred_answer": "",
+                        "useful_span_a": "",
+                        "useful_span_b": "",
+                        "notes": "",
+                    },
+                    "hidden_metadata": {
+                        "label_to_variant": label_to_variant,
+                    },
+                }
+                json_handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+                metadata_handle.write(
+                    json.dumps(
+                        {
+                            "packet_id": packet_id,
+                            "query_id": query_id,
+                            "label_to_variant": label_to_variant,
+                            "pair": {"left": pair[0], "right": pair[1]},
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
+                csv_rows.append(
+                    {
+                        "packet_id": packet_id,
+                        "query_id": query_id,
+                        "comparison_pair": f"{pair[0]} vs {pair[1]}",
+                        "query": query,
+                        "answer_a": label_to_answer["Answer A"],
+                        "answer_b": label_to_answer["Answer B"],
+                        "does_answer_a_answer_question": "",
+                        "does_answer_b_answer_question": "",
+                        "preferred_answer": "",
+                        "useful_span_a": "",
+                        "useful_span_b": "",
+                        "notes": "",
+                    }
+                )
+    fieldnames = [
+        "packet_id",
+        "query_id",
+        "comparison_pair",
+        "query",
+        "answer_a",
+        "answer_b",
+        "does_answer_a_answer_question",
+        "does_answer_b_answer_question",
+        "preferred_answer",
+        "useful_span_a",
+        "useful_span_b",
+        "notes",
+    ]
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(csv_rows)
+    readme = f"""# Pairwise Human Annotation Packet
+
+This packet contains {len(csv_rows)} blinded pairwise answer comparisons.
+
+For each row:
+
+- read the query
+- mark whether Answer A and Answer B answer the question: `yes`, `partially`, or `no`
+- choose `A`, `B`, `tie`, or `neither` as the preferred answer
+- copy the useful span from each answer when one exists
+- add concise notes when useful
+
+Variant labels are hidden in `human_pairwise_hidden_metadata.jsonl`.
+"""
+    (output_dir / "human_pairwise_annotation_readme.md").write_text(readme, encoding="utf-8")
+    print(f"Wrote pairwise human annotation packet to {output_dir}")
+
+
 def main() -> None:
     args = parse_args()
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    answers = load_answers(Path(args.answers), args.variants)
+    variants = (
+        sorted({variant for pair in args.pairs for variant in parse_pair(pair)})
+        if args.packet_format == "pairwise"
+        else args.variants
+    )
+    answers = load_answers(Path(args.answers), variants)
+    if args.packet_format == "pairwise":
+        write_pairwise_packet(args, answers)
+        return
     selected = choose_queries(args, answers)
 
     json_path = output_dir / "human_annotation_packet.jsonl"

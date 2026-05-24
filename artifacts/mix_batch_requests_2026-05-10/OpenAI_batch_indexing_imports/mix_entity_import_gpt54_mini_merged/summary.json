@@ -1,9 +1,0 @@
-{
-  "rows": 579,
-  "replaced_with_retry_rows": 251,
-  "total_entities": 23874,
-  "mean_entities_per_chunk": 41.233160621761655,
-  "median_entities_per_chunk": 39,
-  "min_entities_per_chunk": 2,
-  "max_entities_per_chunk": 104
-}

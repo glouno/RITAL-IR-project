@@ -8,6 +8,33 @@ Rule for future changes:
 - Keep entries short and grouped by change set, not by every tiny edit.
 - Prefer linking to the main touched files and describing the user-visible or experiment-visible effect.
 
+## Submission Cleanup
+
+### 2026-05-24
+
+Cleaned the repository presentation for project-report submission while keeping
+the final experiment artifacts inspectable.
+
+- Rewrote the main README around the active `main.py` + `src/hirag/` execution
+  path, current query modes, evaluation workflow, and final result locations.
+- Removed superseded raw Batch request/result artifacts, legacy partial answer
+  eval outputs, terminal resume logs, duplicate raw annotation CSV, and internal
+  presentation review notes from `artifacts/`.
+- Kept final graph files, graph visualizations, summaries, metrics, imported
+  answers/judgments, and human-annotation outputs for reviewer exploration.
+- Added a submission zip helper that excludes local state, downloaded datasets,
+  virtualenvs, internal handoff/change-tracking docs, and old presentation
+  versions from the packaged archive.
+
+Files:
+
+- [README.md](/home/paulbeglin/projects/RITAL-IR-project/README.md)
+- [.gitignore](/home/paulbeglin/projects/RITAL-IR-project/.gitignore)
+- [docs/RETRIEVAL_IMPROVEMENTS_IMPLEMENTED.md](/home/paulbeglin/projects/RITAL-IR-project/docs/RETRIEVAL_IMPROVEMENTS_IMPLEMENTED.md)
+- [artifacts/openai_full_hirag_2026-05/core7_eval/summary/CORE7_EVALUATION_SUMMARY.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/core7_eval/summary/CORE7_EVALUATION_SUMMARY.md)
+- [scripts/make_submission_zip.sh](/home/paulbeglin/projects/RITAL-IR-project/scripts/make_submission_zip.sh)
+- [artifacts/mix_batch_requests_2026-05-10/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/mix_batch_requests_2026-05-10/README.md)
+
 ## Core 7 Evaluation Prep
 
 Prepared the post-merge evaluation path for the combined retrieval + MCTS branch.

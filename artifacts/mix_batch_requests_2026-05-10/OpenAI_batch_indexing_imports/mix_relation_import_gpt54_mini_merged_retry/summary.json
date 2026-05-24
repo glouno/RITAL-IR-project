@@ -1,9 +1,0 @@
-{
-  "rows": 579,
-  "replaced_with_retry_rows": 71,
-  "total_relations": 19676,
-  "mean_relations_per_chunk": 33.98272884283247,
-  "median_relations_per_chunk": 33,
-  "min_relations_per_chunk": 1,
-  "max_relations_per_chunk": 96
-}

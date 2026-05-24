@@ -1,255 +1,225 @@
-# RITAL IR Project
+# RITAL IR Project: HiRAG Reproduction and Retrieval Experiments
 
-This repository is set up to study and reproduce the paper:
+This repository contains our implementation work for a course project on
+hierarchical graph retrieval for retrieval-augmented generation (RAG). The main
+code path is based on HiRAG, "Retrieval-Augmented Generation with Hierarchical
+Knowledge", and extends it with local execution support, retrieval variants,
+evaluation scripts, and analysis artifacts.
 
-- HiRAG: Retrieval-Augmented Generation with Hierarchical Knowledge
-- arXiv: https://arxiv.org/abs/2503.10150
-- Official code: https://github.com/hhy-huang/HiRAG
+The project focuses on three questions:
 
-## What the paper does
+- how HiRAG builds and queries a hierarchical knowledge graph;
+- how graph retrieval compares with a dense text-only baseline on UltraDomain;
+- whether modified bridge-retrieval strategies improve answer quality or reduce
+  noisy graph context.
 
-HiRAG extends graph-based RAG with two ideas:
+## Repository Structure
 
-1. `HiIndex`
-   It builds a flat entity graph from documents, then adds higher graph layers made of summary entities. Those summary entities connect semantically related entities that may be far apart in the base graph.
-2. `HiRetrieval`
-   It retrieves:
-   - local knowledge: top query-relevant entities
-   - global knowledge: community reports connected to those entities
-   - bridge knowledge: shortest-path relations linking key entities across communities
+```text
+.
+├── main.py                       # Main indexing/query entry point
+├── src/hirag/                    # Active HiRAG implementation
+├── eval/                         # Dataset preparation and evaluation scripts
+├── tests/                        # Unit tests for retrieval/evaluation helpers
+├── docs/                         # Method notes and experiment documentation
+├── artifacts/                    # Curated result summaries and selected outputs
+├── imgs/                         # Figures from the original HiRAG repository
+├── pyproject.toml                # Python dependencies and package metadata
+└── .env.example                  # Local runtime configuration template
+```
 
-The paper argues that this fixes two problems in earlier graph-RAG systems:
+There is also a secondary package under `src/rital_ir_project/`. It is an early
+scaffold used for small local experiments with simpler extraction and retrieval
+logic. The experiments reported for this project use the top-level `main.py`
+script and `src/hirag/`.
 
-- semantically similar entities can be structurally far apart
-- local entity descriptions and global community summaries can be disconnected
+## Main Implementation
 
-## Datasets you should download
+The active runtime is:
 
-For the main experiments in the paper, you should download these four UltraDomain subsets:
+1. `main.py`
+2. `src/hirag/hirag.py`
+3. `src/hirag/_op.py`
+4. `src/hirag/prompt.py`
+5. `src/hirag/_storage/`
 
-- `mix.jsonl`
-- `cs.jsonl`
-- `legal.jsonl`
-- `agriculture.jsonl`
+The top-level script configures HiRAG for a local or OpenAI-compatible runtime:
 
-Source:
+- chat completions use an OpenAI-compatible endpoint, such as vLLM;
+- embeddings can be generated with FastEmbed for local indexing runs;
+- context inputs can be plain text files or JSON lists of context strings;
+- both high-capacity and low-cost model hooks are routed through the configured
+  chat backend for reproducible local experiments.
 
-- UltraDomain on Hugging Face: https://huggingface.co/datasets/TommyChien/UltraDomain
-- HiRAG README referencing UltraDomain: https://github.com/hhy-huang/HiRAG
+## Datasets
 
-Why these four:
+The main experiments use UltraDomain subsets:
 
-- the paper states that its main evaluation uses `Mix`, `CS`, `Legal`, and `Agriculture`
-- each JSONL row already contains a query plus a long context passage/document
+- Agriculture
+- Mix
+- Computer Science
+- Legal
 
-Optional datasets for the appendix-style objective QA evaluation:
+For graph construction and indexing-cost estimates, use the extracted
+`*_unique_contexts.json` files rather than the raw QA JSONL files:
 
-- HotpotQA dev set
-- 2WikiMultiHopQA dev set
+```text
+eval/datasets/agriculture/agriculture_unique_contexts.json
+eval/datasets/cs/cs_unique_contexts.json
+eval/datasets/legal/legal_unique_contexts.json
+eval/datasets/mix/mix_unique_contexts.json
+```
 
-Sources:
+These files are JSON arrays of unique source contexts. The helper that produced
+them is `eval/extract_context.py`.
 
-- HotpotQA homepage: https://hotpotqa.github.io/
-- 2WikiMultiHopQA repository: https://github.com/Alab-NII/2wikimultihop
+## Query Modes
 
-Important note:
+The main query modes exposed by `main.py` are:
 
-- the paper's headline results are on UltraDomain
-- HotpotQA and 2WikiMultiHopQA are only used in the appendix-style exact-match and F1 evaluation
+| Mode | Purpose |
+|---|---|
+| `hi` | Default HiRAG retrieval with local, global, and bridge context |
+| `naive` | Dense text-only retrieval baseline |
+| `hi_nobridge` | HiRAG retrieval without bridge context |
+| `hi_local` | Local entity context only |
+| `hi_global` | Community/global context only |
+| `hi_bridge` | Bridge context only |
+| `hi_weighted` | Query-weighted bridge scoring |
+| `hi_minmax` | Minimax bridge path strategy |
+| `hi_minmax_budgeted` | Budget-aware minimax bridge strategy |
+| `hi_rerank` | Local candidate reranking |
+| `hi_rerank_weighted` | Reranking plus weighted bridge scoring |
+| `hi_mcts` | Experimental MCTS bridge traversal |
 
-## Reproduction strategy
+## Setup
 
-There are two realistic levels of reproduction.
+This project uses `uv`.
 
-### 1. Paper-faithful reproduction
+```bash
+uv sync
+```
 
-This is the closest version to the paper.
+The project currently targets Python 3.13 through the constraints in
+`pyproject.toml`.
 
-You should keep:
+Copy the example environment file if you prefer environment-variable
+configuration:
 
-- LLM-based entity extraction
-- LLM-based relation extraction
-- LLM-based summary-entity generation at each hierarchy layer
-- community reports generated by an LLM
-- three-level retrieval: local, global, bridge
-- GMM clustering and the cluster-sparsity stopping rule
-- graph community detection
+```bash
+cp .env.example .env
+```
 
-The paper reports using:
+The `.env` file is intentionally ignored by Git.
 
-- DeepSeek-V3 for extraction, summarization, and answer generation
-- GLM-4-Plus embeddings
-- GPT-4o as the LLM judge for win-rate evaluation
+## Running an Indexing Experiment
 
-This is the right target if your group wants to discuss reproducibility rigorously in the presentation.
+First check that the local OpenAI-compatible chat backend is available:
 
-### 2. Local approximation
+```bash
+curl -sS http://127.0.0.1:8000/v1/models
+```
 
-This repository currently implements a runnable scaffold that keeps the algorithmic structure of HiRAG while replacing proprietary parts with local approximations:
+Then run indexing on one unique-context dataset:
 
-- regex-based entity extraction instead of LLM extraction
-- heuristic cluster summarization instead of LLM summarization
-- TF-IDF embeddings instead of API embeddings
-- louvain/greedy community detection instead of exact Leiden-by-default replication
+```bash
+uv run python main.py \
+  --context-file eval/datasets/agriculture/agriculture_unique_contexts.json \
+  --knowledge-graph-path /tmp/hirag_graphs \
+  --graph-vis-path /tmp/hirag_vis \
+  --graph-name agriculture_full \
+  --base-url http://127.0.0.1:8000/v1 \
+  --api-key EMPTY \
+  --chat-model nvidia/Gemma-4-31B-IT-NVFP4 \
+  --embed-model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 \
+  --embed-dim 384 \
+  --max-token-size 8192 \
+  --embedding-batch-num 6 \
+  --embedding-func-max-async 8 \
+  --fastembed-cache-path /tmp/fastembed_cache \
+  --log-level INFO
+```
 
-This is useful to:
+The graph output is written under:
 
-- understand the mechanics of the method
-- validate the indexing and retrieval flow
-- debug the hierarchy and bridge-retrieval logic
-- prepare the codebase before plugging in stronger LLM backends
+```text
+<knowledge-graph-path>/<graph-name>_<timestamp>/
+```
 
-## Recommended project plan
+Use `--query` and `--query-mode` to run a query after indexing:
 
-### Phase 1. Understand the paper
+```bash
+uv run python main.py \
+  --context-file eval/datasets/mix/mix_unique_contexts.json \
+  --knowledge-graph-path /tmp/hirag_graphs \
+  --graph-vis-path /tmp/hirag_vis \
+  --graph-name mix_full \
+  --base-url http://127.0.0.1:8000/v1 \
+  --api-key EMPTY \
+  --chat-model nvidia/Gemma-4-31B-IT-NVFP4 \
+  --query "What is the main claim supported by the retrieved evidence?" \
+  --query-mode hi
+```
 
-- read Sections 4 and 5 carefully
-- extract the exact indexing pipeline, retrieval pipeline, datasets, metrics, and ablations
-- note the two ablations explicitly used in the paper:
-  - `w/o HiIndex`
-  - `w/o Bridge`
+## Evaluation Workflow
 
-### Phase 2. Build the minimum runnable core
+The `eval/` directory contains scripts for:
 
-- implement chunking
-- implement entity and relation extraction
-- build the base graph
-- implement hierarchical clustering with GMM
-- stop adding layers when cluster sparsity stops improving
-- detect communities
-- implement local/global/bridge retrieval
+- extracting unique contexts;
+- benchmarking retrieval context composition;
+- exporting and importing batch answer-generation requests;
+- running pairwise answer judging;
+- summarizing retrieval traces and final metrics;
+- building human annotation packets and analysis figures.
 
-### Phase 3. Reproduce a small slice first
+The most relevant result summaries are under:
 
-Do not start with all four datasets.
+```text
+artifacts/openai_full_hirag_2026-05/
+artifacts/openai_full_hirag_2026-05/summary/
+artifacts/openai_full_hirag_2026-05/core7_eval/summary/
+artifacts/openai_full_hirag_2026-05/core7_eval/human_annotation_results/
+```
 
 Start with:
 
-- `mix` or `cs`
-- a small subset of contexts
-- HiRAG vs NaiveRAG only
+- `artifacts/openai_full_hirag_2026-05/summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md`
+- `artifacts/openai_full_hirag_2026-05/core7_eval/summary/CORE7_EVALUATION_SUMMARY.md`
+- `artifacts/openai_full_hirag_2026-05/core7_eval/human_annotation_results/HUMAN_ANNOTATION_ANALYSIS.md`
 
-This lets you validate:
+## Main Experimental Finding
 
-- extraction quality
-- graph correctness
-- hierarchy depth
-- shortest-path bridge retrieval
+In the final Agriculture and Mix runs, the dense text-only `naive` baseline was
+preferred by the pairwise judge more often than graph-based HiRAG variants. The
+`hi_nobridge` ablation also outperformed default `hi` in these runs, suggesting
+that bridge context can add noise when graph paths are not tightly aligned with
+the question. The weighted, reranked, and budgeted bridge variants provide
+useful diagnostics but did not robustly outperform the simpler baselines.
 
-### Phase 4. Scale to the full paper setup
+These results should be interpreted as pairwise LLM-judge preferences, not as
+ground-truth factual accuracy. The human annotation analysis and retrieval trace
+summaries provide additional evidence about where graph retrieval helps or
+hurts.
 
-- run the four UltraDomain subsets
-- add the two ablations
-- measure runtime, token cost, and query cost
-- only after that add appendix-style QA experiments
+## Tests
 
-### Phase 5. Presentation material
-
-Your slides should cover:
-
-- paper contribution and positioning
-- exact model pipeline
-- datasets and evaluation protocol
-- reproducibility issues
-- what you had to change
-- results, failures, and possible improvements
-
-## What this repository now contains
-
-- a CLI to list, download, and inspect the required datasets
-- a HiRAG-style scaffold for:
-  - chunking
-  - graph construction
-  - hierarchical clustering
-  - community detection
-  - local/global/bridge retrieval
-- a paper-oriented implementation plan you can reuse for the report and slides
-
-## Commands
-
-This project uses `uv` and the dependency definitions in [pyproject.toml](/Users/glouno/sourceCode/RITAL-IR-project/pyproject.toml).
-
-Initial setup:
+Run the test suite with:
 
 ```bash
-uv sync
+uv run pytest
 ```
 
-This will create the local environment and install the project from `pyproject.toml`.
-
-If you add a new dependency, do not edit ad-hoc environment state with `pip`. Use:
+For a faster check while editing retrieval or evaluation code:
 
 ```bash
-uv add <package>
+uv run pytest tests/test_hirag_retrieval_experiments.py tests/test_answer_level_evaluation.py
 ```
 
-If you need a development-only dependency, use:
+## Notes for Reviewers
 
-```bash
-uv add --dev <package>
-```
+Large source datasets and local model caches are not required to inspect the
+code. The checked-in artifacts are selected outputs intended to make the final
+experiments inspectable without rerunning the full indexing pipeline.
 
-After pulling new changes from teammates, refresh the environment with:
-
-```bash
-uv sync
-```
-
-List the paper datasets:
-
-```bash
-uv run python -m src.main datasets list
-```
-
-Download the four main UltraDomain subsets:
-
-```bash
-uv run python -m src.main datasets download mix cs legal agriculture
-```
-
-Inspect a downloaded dataset:
-
-```bash
-uv run python -m src.main datasets stats data/ultradomain/mix.jsonl
-```
-
-Print the implementation breakdown:
-
-```bash
-uv run python -m src.main plan
-```
-
-Run the local HiRAG-style demo on a small subset:
-
-```bash
-uv run python -m src.main demo \
-  --dataset data/ultradomain/mix.jsonl \
-  --limit 5
-```
-
-With a custom query:
-
-```bash
-uv run python -m src.main demo \
-  --dataset data/ultradomain/cs.jsonl \
-  --limit 5 \
-  --query "How does Spark Streaming enable real-time processing?"
-```
-
-Run the tests:
-
-```bash
-uv run python -m unittest discover -s tests
-```
-
-## Practical advice
-
-If the goal is a solid class project rather than a perfect industrial reproduction, the best order is:
-
-1. reproduce the indexing and retrieval logic locally
-2. validate it on a small slice of `mix` or `cs`
-3. plug in stronger extraction and summarization backends
-4. run the paper datasets
-5. document every deviation from the paper
-
-That gives you something both implementable and defensible in the final presentation.
+Full graph construction on the unique-context files can take several hours on a
+local LLM backend because the source contexts are long and produce many chunks.

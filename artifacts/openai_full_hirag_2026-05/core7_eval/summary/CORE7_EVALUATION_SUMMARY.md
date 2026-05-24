@@ -2,7 +2,7 @@
 
 Scope: Agriculture + Mix, OpenAI-full HiRAG workdirs, Core 7 variants, `gpt-5.4-mini` answers and pairwise judge, `text-embedding-3-small` embeddings.
 
-Important baseline note: `hi` is our fork baseline with query-aware source snippets enabled, not a byte-for-byte untouched upstream HiRAG baseline.
+Important baseline note: `hi` is the project baseline with query-aware source snippets enabled, not a byte-for-byte untouched upstream HiRAG baseline.
 
 ## Run Health
 
@@ -38,4 +38,3 @@ Important baseline note: `hi` is our fork baseline with query-aware source snipp
 - `hi_minmax_budgeted`: raw win rate `0.567`, strict wins/losses/disagree `11/7/12`, mean retrieval `2.43s`, mean context tokens `3206`.
 - `hi_rerank_weighted`: raw win rate `0.500`, strict wins/losses/disagree `11/11/8`, mean retrieval `5.01s`, mean context tokens `3597`.
 - `hi_mcts`: raw win rate `0.450`, strict wins/losses/disagree `6/8/15`, mean retrieval `0.96s`, mean context tokens `3159`.
-

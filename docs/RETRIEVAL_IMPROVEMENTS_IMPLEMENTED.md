@@ -9,7 +9,7 @@ This document explains what was actually implemented in this repository to impro
 - [src/hirag/\_op.py](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/src/hirag/_op.py)
 - [src/hirag/base.py](/Users/bsh2022/Study/master_ue/rital/RITAL-IR-project/src/hirag/base.py)
 
-It does not treat `src/rital_ir_project/` as the main runtime, because the repository handoff notes explicitly say the active retrieval path is the top-level HiRAG fork under `src/hirag/`.
+It does not treat `src/rital_ir_project/` as the main runtime; the active retrieval path for the project is the top-level HiRAG implementation under `src/hirag/`.
 
 ## Executive Summary
 
@@ -24,7 +24,7 @@ The retrieval work in this repo improves HiRAG in five main ways:
 In short:
 
 - baseline HiRAG retrieved good entities, but bridge path selection was mostly graph-topology driven
-- this fork makes the bridge itself query-conditioned
+- this implementation makes the bridge itself query-conditioned
 - it also improves the seed entities through reranking
 - and it adds tooling to measure whether those changes really improve the retrieved context
 
@@ -717,7 +717,7 @@ If we include supporting work that improves retrieval quality or makes those met
 
 ## Bottom Line
 
-The main retrieval idea implemented in this fork is:
+The main retrieval idea implemented in this project is:
 
 $$
 	extbf{make HiRAG retrieval more query-aware at both ends}

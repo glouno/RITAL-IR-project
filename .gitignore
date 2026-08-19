@@ -20,3 +20,7 @@ CACHEDIR.TAG
 
 # Env file
 .env
+
+# macOS metadata and generated submission packages
+.DS_Store
+submission/

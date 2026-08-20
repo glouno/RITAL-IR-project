@@ -2,141 +2,91 @@
 
 ## 1. Dataset & Metriques
 
-Nous avons travaille principalement sur deux sous-ensembles UltraDomain :
-`Agriculture` et `Mix`. Ces datasets font partie des quatre domaines utilises
-par le papier HiRAG, avec `CS` et `Legal`. Nous n'avons pas finalise `CS` et
-`Legal`, car le cout de construction des graphes etait trop eleve, et les deux
-datasets deja traites suffisaient pour evaluer notre hypothese principale.
+Nous avons evalue HiRAG sur deux sous-ensembles d'UltraDomain Benchmark : `Agriculture` et `Mix`. Les deux autres domaines du papier, `CS` et `Legal`, n'ont pas ete relances dans la phase finale car le cout de reconstruction complete des graphes etait plus eleve. Notre objectif etait d'abord de valider proprement le pipeline complet sur deux domaines contrastes.
 
-Par rapport au papier HiRAG, nos metriques sont partiellement comparables, mais
-pas parfaitement identiques. Le papier utilise une evaluation par juge LLM sur
-des criteres qualitatifs comme la completude, la diversite et l'utilite de la
-reponse, ainsi que des comparaisons de type win-rate. Nous avons reproduit ce
-principe avec un juge LLM via OpenAI Batch, en comparant les reponses generees
-par le HiRAG baseline `hi` contre nos variantes.
+Graphes reconstruits avec la stack OpenAI :
+
+| Dataset | Docs | Questions | Chunks | Nodes | Edges | Community reports |
+|---|---:|---:|---:|---:|---:|---:|
+| Agriculture | 12 | 100 | 1 756 | 23 224 | 48 428 | 4 639 |
+| Mix | 61 | 130 | 579 | 16 356 | 25 960 | 2 695 |
+
+Nous avons utilise `gpt-5.4-mini` pour la generation des reponses et le LLM-as-a-judge, et `text-embedding-3-small` pour les embeddings. Les comparaisons principales portent sur `naive`, `hi` (baseline HiRAG de notre fork), `hi_weighted`, `hi_minmax`, `hi_minmax_budgeted`, `hi_rerank_weighted` et `hi_mcts`.
+
+Les metriques sont partiellement comparables au papier HiRAG. Comme dans l'article, nous utilisons une evaluation pairwise par juge LLM et des win rates. En revanche, ce n'est pas une replication exacte : les modeles ne sont pas ceux du papier original, le baseline `hi` correspond a notre fork avec query-aware source snippets, et nous ne couvrons pas les quatre domaines finaux.
 
 Metriques utilisees :
 
-- `Raw win rate` : proportion de jugements ou une variante bat le baseline `hi`.
-- `Swapped-order agreement` : stabilite du juge quand l'ordre des reponses est inverse.
-- `Strict variant win rate` : taux de victoire conservateur, comptant seulement les requetes ou les deux ordres de jugement donnent la meme variante gagnante.
-- `Mean context tokens` : taille moyenne du contexte donne au generateur.
-- `Mean bridge edges` et `mean path edges` : taille du contexte de pont dans le graphe.
-- `Actual total tokens` : cout reel en tokens des reponses.
-- Metriques proxy de retrieval sur Agriculture q50 : query overlap, local recall, global recall, latence.
+- `LLM-as-a-judge win rate` : proportion de comparaisons ou une variante est preferee a HiRAG.
+- `Strict swapped-order win rate` : win rate plus conservateur, garde seulement les paires ou le juge reste coherent quand l'ordre A/B est inverse.
+- `Human win rate` : preference humaine pairwise contre HiRAG classique, ties comptes comme 0.5.
+- `Answer-question score` : proportion de reponses jugees comme repondant a la question par les annotateurs humains.
+- `Span density` : proportion de la reponse surlignee comme utile par les annotateurs.
+- `Retrieval metrics` : temps de retrieval, nombre d'edges de bridge, taille des chemins, tokens de contexte, composition du prompt final.
 
-Resultat principal :
+Resultats principaux :
 
-| Dataset | Variante vs `hi` | Raw Win Rate | Agreement | Strict Win Rate |
-|---|---:|---:|---:|---:|
-| Agriculture | `hi_minmax_budgeted` | 50.0% | 40.0% | 20.0% |
-| Agriculture | `hi_rerank_weighted` | 58.3% | 76.7% | 46.7% |
-| Mix | `hi_minmax_budgeted` | 28.3% | 46.7% | 6.7% |
-| Mix | `hi_rerank_weighted` | 55.0% | 70.0% | 40.0% |
+| Variante | Human win rate vs HiRAG | LLM win rate strict | Span density |
+|---|---:|---:|---:|
+| Naive | 65.0% | 78.6% | 32.0% |
+| Minmax budgeted | 45.0% | 61.5% | 32.1% |
+| MCTS | 52.5% | 38.5% | 30.4% |
 
-La metrique la plus proche du papier est donc le win-rate par juge LLM. En
-revanche, notre protocole n'est pas une reproduction complete, car nous
-n'utilisons pas exactement les memes modeles, pas tous les domaines, et Mix
-utilise des community reports extractifs plutot que generes par LLM.
+Lecture principale : nos variantes graphe, surtout MCTS et weighted/minmax selon le domaine, montrent qu'il est possible d'ameliorer le parcours dans le graphe par rapport a HiRAG classique. Cependant, `naive` reste tres fort en evaluation finale, car il conserve beaucoup plus d'evidence source exacte dans le prompt. Dans nos traces, les modes graphe donnent environ 20-21% d'evidence source directe en Agriculture et environ 34% en Mix, contre presque 100% pour naive RAG.
 
 ## 2. Difficultes d'Implementation & Solutions
 
-La premiere difficulte majeure a ete le cout de construction des graphes. HiRAG
-necessite extraction d'entites, extraction de relations, clustering
-hierarchique, generation de resumes de communautes et indexation vectorielle.
-Meme sur Agriculture, seulement 12 documents longs produisent 1 756 chunks. Un
-run complet peut durer plusieurs heures avec un backend local.
+La premiere difficulte a ete la reconstruction complete du pipeline HiRAG. Le systeme ne consiste pas seulement a faire du retrieval : il faut extraire les entites, extraire les relations, construire un graphe, calculer des embeddings, creer une hierarchie de communautes, generer des community reports, materialiser les vector stores, puis seulement ensuite generer et juger les reponses.
 
-Solution : nous avons d'abord reduit le perimetre experimental, puis ajoute des
-regimes de prompts plus concis (`lean`, `ultra_lean`) et des outils de batch
-OpenAI pour deporter certaines etapes couteuses.
+Solution : nous avons construit un pipeline OpenAI Batch complet pour les etapes couteuses, avec manifests, retries, couts reels, et verification des erreurs. Cela nous a permis de reconstruire Agriculture et Mix proprement, sans dependre des limites de temps d'inference du vLLM local.
 
-La deuxieme difficulte concernait la stabilite du pipeline. Les etapes de
-clustering GMM peuvent echouer quand les embeddings sont trop proches ou
-degeneres. Certaines requetes depassaient aussi les limites de contexte des
-modeles.
+La deuxieme difficulte concernait les limites de tokens et la stabilite des sorties LLM. Certaines extractions ou generations pouvaient etre tronquees, mal parsees, ou depasser les budgets prevus.
 
-Solution : nous avons ajoute des protections sur les budgets de tokens, des
-marges de securite, des limites de taille pour les prompts, et du durcissement
-cote GMM.
+Solution : nous avons utilise des plafonds de `max_completion_tokens` plus hauts, des retries cibles sur les lignes tronquees ou mal parsees, et des fichiers de revue manuelle pour les cas residuels. Nous avons aussi corrige un probleme important de `max_token_for_community_report`, qui supprimait parfois des community reports entiers du contexte final.
 
-La troisieme difficulte etait l'evaluation. Le papier utilise une evaluation
-qualitative par LLM, mais cela coute cher et introduit du bruit.
+La troisieme difficulte etait le cout et le stockage des embeddings, notamment pour les edge embeddings necessaires aux variantes query-aware.
 
-Solution : nous avons utilise un protocole pairwise avec ordre inverse des
-reponses. Cela permet de mesurer non seulement le win-rate, mais aussi la
-stabilite du juge. C'est important, car certaines variantes semblent bonnes en
-raw win-rate mais deviennent moins convaincantes avec le strict agreement.
+Solution : nous avons ajoute de l'outillage pour batcher les embeddings d'edges avec OpenAI, les importer dans le cache runtime, puis reutiliser ce cache pendant les evaluations. Cela rend les variantes weighted, minimax et MCTS executables sans recalculer les embeddings a chaque requete.
 
-La quatrieme difficulte etait theorique : le bridge retrieval original est
-partiellement query-aware, mais le chemin dans le graphe reste surtout
-topologique.
+La quatrieme difficulte etait algorithmique. Le bridge original de HiRAG est surtout topologique : il relie des entites locales et des communautes globales, mais le chemin n'est pas assez conditionne par la requete.
 
-Solution : nous avons implemente des variantes de retrieval query-aware :
-chemins ponderes par similarite avec la requete, strategie minmax, budget de
-pont, et reranking local.
+Solution : nous avons implemente plusieurs variantes query-aware : Dijkstra pondere, Minimax, Minimax budgeted, reranking ColBERT des entites locales, et MCTS pour explorer dynamiquement des chemins dans un sous-graphe candidat.
 
-## 3. Limites de Resolution
+La derniere difficulte etait l'evaluation. Le LLM-as-a-judge est utile mais bruite, et il peut etre sensible a l'ordre des reponses.
 
-Certains aspects du papier sont difficiles, voire impossibles a reproduire
-fidelement dans notre contexte.
+Solution : nous avons juge les paires dans les deux ordres, mesure les desaccords d'ordre, puis ajoute une annotation humaine sur un sous-ensemble de 60 comparaisons. Les humains annotaient la preference, si chaque reponse repondait a la question, et les spans utiles.
 
-D'abord, les modeles exacts ne sont pas tous disponibles ou pratiques a
-utiliser. Le papier mentionne DeepSeek-V3, GLM-4-Plus embeddings et GPT-4o
-comme juge. Nous avons utilise un melange de vLLM/local, FastEmbed et OpenAI
-Batch. Cela rend les resultats comparables dans l'esprit, mais pas strictement
-equivalents.
+## 3. Limites de Resolution (L'Impossible)
 
-Ensuite, la construction complete sur les quatre datasets est tres couteuse.
-`Legal` et `CS` ont beaucoup de chunks, et refaire extraction, relations,
-hierarchie et community reports serait long et cher.
+Une replication strictement fidele du papier est difficile, meme avec une implementation rigoureuse. D'abord, les modeles exacts du papier, les prompts internes, les parametres de generation et certains details de pipeline ne sont pas tous disponibles ou pas parfaitement reproductibles. Nos resultats sont donc comparables dans l'esprit, mais pas identiques au protocole original.
 
-Autre limite : la generation des community reports. Dans Mix, le graphe batch a
-ete materialise avec des community reports extractifs, pas des resumes LLM
-complets. Cela reduit la fidelite au papier.
+Ensuite, la construction complete des graphes sur tous les domaines est couteuse. Meme Agriculture, qui ne contient que 12 documents, produit 1 756 chunks et plus de 48 000 edges. Refaire Agriculture, Mix, CS et Legal avec extraction, relations, hierarchy, community reports, embeddings et evaluation complete demanderait un budget et un temps beaucoup plus importants.
 
-Enfin, l'evaluation par juge LLM reste bruitee. Meme avec l'ordre inverse, on
-observe des desaccords. C'est pourquoi nous rapportons aussi le strict win rate.
-Ce bruit rend impossible une conclusion absolue du type "la variante X est
-toujours meilleure".
+Une autre limite est que le graphe est une representation compressee. Les entites, relations et community reports structurent l'information, mais ils ne remplacent pas toujours les passages sources exacts. Pour des taches QA, le LLM a souvent besoin de citations ou details textuels precis. C'est une limite de resolution importante : un meilleur graphe ne garantit pas une meilleure reponse si le prompt final ne preserve pas assez d'evidence.
 
-Donc notre travail doit etre presente comme une reproduction partielle et une
-analyse experimentale ciblee, pas comme une replication complete du papier.
+Enfin, l'evaluation par LLM-as-a-judge reste imparfaite. Nous avons observe des desaccords lorsque l'ordre des reponses est inverse. L'annotation humaine confirme aussi que "repondre a la question" et "etre prefere" ne mesurent pas exactement la meme chose : MCTS repond tres souvent correctement, mais n'est pas toujours prefere a HiRAG.
 
-## 4. Amelioration Majeure / Next Step
+Notre travail doit donc etre presente comme une reproduction experimentale et une analyse critique de HiRAG, pas comme une replication exacte et definitive du papier.
 
-L'amelioration prioritaire serait de rendre HiRetrieval plus query-aware tout en
-controlant strictement le budget de contexte.
+## 4. Amelioration Majeure (Next Step)
 
-Notre resultat principal montre que `hi_rerank_weighted` est la variante la plus
-robuste. Elle combine :
+L'amelioration prioritaire serait de construire un HiRAG `evidence-aware` : utiliser le graphe pour trouver les bons chemins, mais reinjecter explicitement les meilleurs extraits sources exacts dans le prompt final.
 
-- reranking local des entites candidates ;
-- ponderation des chemins de bridge par rapport a la requete ;
-- contexte plus compact que le baseline ;
-- meilleur win-rate sur Agriculture et Mix.
-
-A l'inverse, `hi_minmax_budgeted` confirme que les chemins query-aware peuvent
-ameliorer la pertinence du bridge, mais il ajoute trop de contexte et devient
-instable au niveau des reponses finales.
+Nos resultats montrent que les variantes query-aware changent vraiment le retrieval. MCTS, par exemple, explore des chemins pertinents et obtient un score humain legerement positif contre HiRAG classique. Mais cela ne suffit pas toujours, car le contexte final reste trop abstrait : entites, relations, summaries et community reports remplacent parfois les passages sources utiles.
 
 Le next step logique serait donc :
 
-> Developper un module de retrieval adaptatif qui choisit dynamiquement combien
-> de contexte local, global et bridge inclure selon la requete.
+> Combiner traversal dynamique du graphe avec selection controlee de snippets sources exacts.
 
-Concretement :
+Concretement, le systeme devrait :
 
-- garder `hi_rerank_weighted` comme base ;
-- ajouter un budget dynamique pour le bridge ;
-- penaliser les hubs generiques dans le graphe ;
-- selectionner les aretes de pont selon un score combinant pertinence semantique, cout en tokens et diversite ;
-- evaluer avec win-rate, agreement et cout token.
+- partir des entites locales et communautes recuperees par HiRAG ;
+- utiliser weighted/minimax/MCTS pour trouver des chemins query-aware ;
+- recuperer les chunks sources associes aux entites, relations et communautes de ces chemins ;
+- selectionner plusieurs snippets courts mais precis, pas seulement une fenetre trop agressive ;
+- optimiser un budget de contexte qui equilibre graph context et evidence textuelle ;
+- evaluer separement la qualite du retrieval, la composition du prompt, et la qualite de la reponse finale.
 
-Conclusion possible pour le rapport :
+Conclusion courte :
 
-> Notre contribution principale n'est pas de remplacer HiRAG, mais d'identifier
-> une faiblesse precise de HiRetrieval : le bridge retrieval est trop dependant
-> de la topologie du graphe. Une amelioration query-aware, surtout combinee avec
-> du reranking local et un controle du budget, donne un signal plus robuste et
-> plus economique que le baseline.
+> HiRAG ne doit pas seulement mieux raisonner sur un graphe ; il doit mieux transformer ce graphe en preuves textuelles utiles pour le LLM. Notre contribution montre que le graph traversal est ameliorable, mais que le vrai goulot d'etranglement est l'assemblage final du contexte.

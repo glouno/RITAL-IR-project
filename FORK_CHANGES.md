@@ -1247,6 +1247,22 @@ Relevant files:
 - [artifacts/openai_full_hirag_2026-05/summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/summary/FINAL_OPENAI_FULL_HIRAG_RESULTS_2026-05-22.md)
 - [artifacts/openai_full_hirag_2026-05/README.md](/home/paulbeglin/projects/RITAL-IR-project/artifacts/openai_full_hirag_2026-05/README.md)
 
+## Portfolio Presentation Cleanup
+
+### 2026-10-03
+
+- Removed the three intermediate `Présentation HiRAG_V1/V2/V3.pdf` files from
+  the current tree, keeping `Présentation HiRAG_final.pdf` as the presentation.
+  Git tracked both composed and decomposed Unicode spellings of each draft;
+  both spellings were removed.
+- Clarified that the V1/V2 review notes refer to historical drafts and linked
+  them to the final presentation.
+- This reduces root-directory clutter without changing experiments or results.
+- Rewrote the root README around the completed HiRAG extensions, final
+  Agriculture/Mix experiments, findings, and deliverables. Distinguished the
+  active local and OpenAI Batch routes from the early scaffold, and replaced
+  machine-specific links with repository-relative links.
+
 ## Core 7 Retrieval Evidence Diagnostics
 
 ### 2026-05-23

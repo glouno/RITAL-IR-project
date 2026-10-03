@@ -2,7 +2,8 @@
 
 Date: 2026-05-23
 
-Reviewed draft: `Présentation HiRAG_V2.pdf`.
+Reviewed historical draft: `Présentation HiRAG_V2.pdf` (available in Git history).
+Current presentation: [Présentation HiRAG_final.pdf](../../../Présentation%20HiRAG_final.pdf).
 
 ## Overall Verdict
 

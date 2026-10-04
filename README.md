@@ -4,7 +4,7 @@ A Sorbonne RITAL information-retrieval project by [Paul Béglin](https://github.
 
 We reproduce and extend [HiRAG](https://arxiv.org/abs/2503.10150), a retrieval-augmented generation system that organizes documents into a hierarchical knowledge graph. Our question: **can query-aware graph traversal give an answer model better evidence?**
 
-**Start here:** [Final presentation](Présentation%20HiRAG_final.pdf) · [Project summary and findings](Fiche_Rendu.md)
+**Start here:** [Final presentation](presentation.pdf) · [Project summary and findings](Fiche_Rendu.md)
 
 ## What we built
 
